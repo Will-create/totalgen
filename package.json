@@ -1,0 +1,22 @@
+{
+  "name": "totalg",
+  "version": "1.0.0",
+  "description": "",
+  "main": "migration.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Will-create/totalg.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Will-create/totalg/issues"
+  },
+  "homepage": "https://github.com/Will-create/totalg#readme",
+  "dependencies": {
+    "total5": "^0.0.12"
+  }
+}
