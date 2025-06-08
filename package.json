@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/Will-create/totalg#readme",
   "dependencies": {
+    "querybuilderpg": "^1.0.24",
     "total5": "^0.0.12"
   }
 }

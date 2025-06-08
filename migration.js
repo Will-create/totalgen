@@ -1,4 +1,15 @@
 require('total5');
+let { AlterTableBuilder, MigrationBuilder, ColumnBuilder, TableBuilder } = require('./migration-builder');
+
+global.NEWMIGRATION =  function (definition) {
+    var loc = (new Error()).stack.split('\n')[2];
+    loc = loc.split('/')[loc.split('/').length -1];
+    loc = loc.split(':')[0].trim();
+    console.log(`🔥 NEWMIGRATION called from → ${loc}`);
+    if (!Total.migrations)
+        Total.migrations = {};
+    Total.migrations[loc] = definition;
+};
 
 function Migration(opt) {
     var t = this;
@@ -14,14 +25,15 @@ function Migration(opt) {
     t.options.prefix = opt.ignoreprefix ? '' : 'tbl_';
     t.$migrationtable = t.options.table.indexOf(t.options.prefix) == -1 ? t.options.prefix + t.options.table.toLowerCase() : t.options.table.toLoweCase();
 
-}
+};
+
 
 let MP = Migration.prototype;
 // Initializing the migrations by creating a migrations table
 MP.init = function() {
     let t = this;
     return new Promise(function(resolve) {
-        let table = t.options.database == 'postgresql' ? t.options.schema.toLoweCase() + '.' + t.$migrationtable : t.$migrationtable;
+        let table = t.options.database == 'postgresql' ? t.options.schema.toLowerCase() + '.' + t.$migrationtable : t.$migrationtable;
         let query =  `
         CREATE TABLE IF NOT EXISTS  ${table} (
             "id" TEXT NOT NULL,
@@ -31,7 +43,12 @@ MP.init = function() {
             PRIMARY KEY("id")
         );
     `;  
-    t.db.query(query).callback(resolve);
+    t.db.query(query).callback(function(err, res) {
+        if (err) throw new Error(err);
+
+        !err && t.options.debug && t.log('Migrations initialized');
+        !err && resolve(res);
+    });
     });
 };
 
@@ -174,9 +191,9 @@ NEWMIGRATION({
 })
 `;
 };
-MP.log = function(a, b, c, d, e, f) {
+MP.log = function(a) {
 
-    console.log(a, b, c, d, e, f);
+    console.log(a);
 }
 MP.migrate = async function() {
     let t = this;
@@ -187,18 +204,21 @@ MP.migrate = async function() {
         return;
     }
 
+    console.log(pending);
+
     let batch = await t.$getnextbatch();
 
     pending && pending.wait(async function(migration, next) {
+
         t.log('Migrating: ' + migration);
 
         let instance = Total.migrations[migration];
-        let builder = new MigrationBuilder(t.db, t.options.schema);
+        let builder = new MigrationBuilder(t.db, t.options);
         
         await instance.up(builder);
         await t.save(migration, batch);
 
-        t.log('Migrated: ', migration);
+        t.log('Migrated: ' + migration);
         next();
     }, function() {
         t.log('Migration all completed');
@@ -210,7 +230,7 @@ MP.rollback = async function(step) {
     if (!step)
         step = 1;
 
-    const batch = await t.$getnextbatch();
+    const batch = await t.$getlastbatch();
 
     if (!batch) {
         t.log('No migrations to rollback');
@@ -224,7 +244,7 @@ MP.rollback = async function(step) {
     reversed && reversed.wait(async function(migration, next) {
         t.log('Rolling back: ' + migration);
         let instance = Total.migrations[migration];
-        let builder = new MigrationBuilder(t.db, t.options.schema);
+        let builder = new MigrationBuilder(t.db, t.options);
 
         instance.down && await instance.down(builder);
 
@@ -238,11 +258,13 @@ MP.rollback = async function(step) {
 
 MP.$getpending = async function() {
     let t = this;
-    let all = await t.list();
+    return new Promise(async function(resolve) {
+        let all = await t.list();
 
-    let migrations = await t.db.find(t.$migrationtable).fields('name').promise();
-    let names = migrations.map(migration => migration.name);
-    return all.filter(name => !names.includes(name));
+        let migrations = await t.db.find(t.$migrationtable).fields('name').promise();
+        let names = migrations.map(migration => migration.name);
+        resolve(all.filter(name => !names.includes(name)));
+    });
 };
 
 MP.$getnextbatch = async function() {
@@ -253,7 +275,7 @@ MP.$getnextbatch = async function() {
             FROM ${t.$migrationtable}
         `;
 
-    let response = t.db.query(query).promise();
+    let response = await t.db.query(query).promise();
 
     return response[0].nextbatch;
 };
@@ -273,6 +295,7 @@ MP.$getlastbatch = async function() {
 
 MP.$getmigrations = async function(batch) {
     let t = this;
+    return new Promise(async function(resolve) {
 
     let builder = t.db.find(t.$migrationtable);
 
@@ -281,21 +304,27 @@ MP.$getmigrations = async function(batch) {
     builder.fields('name');
 
     let response = await builder.promise();
-    return response.map(item => item.name);
+    let output = response.map(item => item.name);
+    resolve(output);
+    });
 };
 
 MP.save = async function(migration, batch) {
     let t = this;
+   return new Promise(function(resolve) {
     let model = {};
 
     model.id = UID();
-    model.dtcreated = model.dtexecuted = NOW;
+    model.dtexecuted = NOW;
     model.name = migration;
     model.batch = batch;
     t.db.insert(t.$migrationtable, model).callback(NOOP);
+    resolve()   
+});
 };
 
 MP.list = async function() {
+    let t = this;
     return new Promise(async function(resolve) {
         let all = Total.Fs.readdirSync(t.options.path).filter(file => file.endsWith('.js')).sort();
         resolve(all);
@@ -305,7 +334,10 @@ MP.list = async function() {
 
 MP.remove = async function(migration) {
     let t = this;
-    t.db.remove(t.$migrationtable).where('name', migration).callback(NOOP);
+    return new Promise(function(resolve) {
+        t.db.remove(t.$migrationtable).where('name', migration).callback(NOOP);
+        resolve();
+    });
 };
 
 MP.status = async function() {
@@ -334,3 +366,4 @@ MP.status = async function() {
 
 
 
+exports.Migration = Migration;

@@ -1,10 +1,12 @@
 if (!Total) 
     require('total5');
 
-function MigrationBuilder(db, schema) {
+function MigrationBuilder(db, opt) {
+
     var t = this;
     t.db = db;
-    t.schema = schema;
+    t.opt = opt;
+    t.schema = opt.schema;
 }
 
 
@@ -12,10 +14,12 @@ var MBP = MigrationBuilder.prototype;
 
 MBP.createtable = async function(name, callback) {
     var t = this;
+    name = name.indexOf(t.opt.prefix) == -1 ? t.opt.prefix + name : name;
     var builder = new TableBuilder(name, t.schema);
     callback && callback(builder);
 
     var sql = builder.tosql();
+    console.log(sql);
     await t.db.query(sql).promise();
     console.log('Table ' + name + ' created successfully');
 };
@@ -80,7 +84,7 @@ function TableBuilder(name, schema) {
     t.schema = schema || 'public';
     t.columns = [];
     t.constraints = [];
-    t.intexes = [];
+    t.indexes = [];
     
 }
 
@@ -101,7 +105,7 @@ TBP.string = function(name, length) {
 };
 
 
-TBP.string = function(name) {
+TBP.text = function(name) {
     var t = this;
     var column = new ColumnBuilder(name, 'TEXT');
     t.columns.push(column);
@@ -198,8 +202,8 @@ TBP.email = function(name) {
 TBP.timestamps = function() {
     var t = this;
 
-    t.colums.push({ name: 'dtcreated', type: 'TIMESTAMP DEFAULT now()'});
-    t.columns.push({ name: 'dtupdate', type: 'TIMESTAMP'});
+    t.columns.push({ name: 'dtcreated', type: 'TIMESTAMP DEFAULT now()'});
+    t.columns.push({ name: 'dtupdated', type: 'TIMESTAMP'});
     t.constraints.push('-- Triger for dtupdated will be create separately');
 
     return t;
@@ -207,8 +211,8 @@ TBP.timestamps = function() {
 
 TBP.softdeletes = function() {
     var t = this;
-    var dtremoved = new Column('dtremoved', 'TIMESTAMP');
-    var isremoved = new Column('isremoved', 'BOOLEAN DEFAULT FALSE');
+    var dtremoved = new ColumnBuilder('dtremoved', 'TIMESTAMP');
+    var isremoved = new ColumnBuilder('isremoved', 'BOOLEAN DEFAULT FALSE');
     t.columns.push(dtremoved);
     t.columns.push(isremoved);
     return t;
@@ -222,7 +226,7 @@ TBP.foreign = function(column) {
 TBP.index =  function(columns, name) {
     var t = this;
 
-    const index = name || `${t.table}_${Array.isArray(columns) ? columns.join('_') : columns}_index`;
+    const index = name || `${t.name}_${Array.isArray(columns) ? columns.join('_') : columns}_index`;
     const list = Array.isArray(columns) ? columns.join(', ') : columns;
     
     t.indexes.push({ name: index, columns: list, type: 'INDEX' });
@@ -233,7 +237,7 @@ TBP.index =  function(columns, name) {
 TBP.unique =  function(columns, name) {
     var t = this;
 
-    const index = name || `${t.table}_${Array.isArray(columns) ? columns.join('_') : columns}_unique`;
+    const index = name || `${t.name}_${Array.isArray(columns) ? columns.join('_') : columns}_unique`;
     const list = Array.isArray(columns) ? columns.join(', ') : columns;
     
     t.indexes.push({ name: index, columns: list, type: 'UNIQUE INDEX' });
@@ -250,7 +254,7 @@ TBP.tosql =  function() {
 
     let constraints = t.constraints.filter(c=>!c.startsWith('--'));
 
-    var sql = `CREATE TABLE ${t.schema}.${t.table} (\n`;
+    var sql = `CREATE TABLE ${t.schema}.${t.name} (\n`;
     sql += '    ' + definitions.join(',\n  ');
 
     if (constraints.length > 0)
@@ -259,7 +263,7 @@ TBP.tosql =  function() {
     sql += '\n)';
 
     for (const index of t.indexes) 
-        sql += `;\nCREATE ${index.type} ${index.name} 0N ${t.schema}.${t.table} (${index.columns})`;
+        sql += `;\nCREATE ${index.type} ${index.name} 0N ${t.schema}.${t.name} (${index.columns})`;
 
     return sql;
 };
@@ -279,7 +283,7 @@ CBP.notnull = function() {
     return t;
 };
 
-CBP.nullable = function() {
+CBP.nullable = CBP.setnull = function() {
     var t = this;
     t.modifiers.push('NULL');
     return t;
@@ -305,7 +309,7 @@ CBP.references = function(columns) {
 };
 
 CBP.tosql = function() {
-    return `${this.name} ${this.type} ${this.midifiers.join(' ')}`.trim();
+    return `${this.name} ${this.type} ${this.modifiers.join(' ')}`.trim();
 };
 
 function ReferenceBuilder(column, reference) {
@@ -472,6 +476,10 @@ ATBP.getoperations =  function() {
     return this.operations;
 };
 
+exports.MigrationBuilder = MigrationBuilder;
+exports.TableBuilder = TableBuilder;
+exports.AlterTableBuilder = AlterTableBuilder;
+exports.ColumnBuilder = ColumnBuilder;
 
 
 
