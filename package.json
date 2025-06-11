@@ -1,21 +1,29 @@
 {
-  "name": "totalg",
+   "name": "totalgen",
   "version": "1.0.0",
-  "description": "",
-  "main": "migration.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "description": "Total.js CLI tool inspired by Artisan — generate migrations, controllers, schemas, etc.",
+  "main": "index.js",
+  "bin": {
+    "tg": "./.bin/tg"
   },
+  "keywords": [
+    "totaljs",
+    "cli",
+    "artisan",
+    "generator",
+    "migration",
+    "controller"
+  ],
+  "author": "Louis Bertson",
+  "license": "MIT",,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Will-create/totalg.git"
+    "url": "git+https://github.com/Will-create/totalgen.git"
   },
-  "author": "",
-  "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Will-create/totalg/issues"
+    "url": "https://github.com/Will-create/totalgen/issues"
   },
-  "homepage": "https://github.com/Will-create/totalg#readme",
+  "homepage": "https://github.com/Will-create/totalgen#readme",
   "dependencies": {
     "querybuilderpg": "^1.0.24",
     "total5": "^0.0.12"

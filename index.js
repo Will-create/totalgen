@@ -45,3 +45,15 @@ exports.init = async function () {
 
     return migration;
 };
+exports.createmigration = async function (name) {
+    const migration = await exports.init();
+    if (!name) {
+        console.error('Plese provide a name for you migration.');
+        return;
+    }
+    try {
+        await migration.create(name);
+    } catch (err) {
+        console.error('Erreur lors de la création de la migration :', err.message);
+    }
+};
