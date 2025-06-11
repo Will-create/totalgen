@@ -23,9 +23,9 @@ tg <command> <name> [--prompt="enhance with AI"]
 ### ✅ Examples
 
 ```bash
-tg migration create_users_table
-tg controller user
-tg plugin auth --prompt="secure JWT login system"
+tg generate:migration create_users_table
+tg generate:controller user
+tg generate:plugin auth --prompt="secure JWT login system"
 ```
 
 ---
