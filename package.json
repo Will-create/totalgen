@@ -25,7 +25,6 @@
    },
    "homepage": "https://github.com/Will-create/totalgen#readme",
    "dependencies": {
-      "querybuilderpg": "^1.0.24",
       "total5": "^0.0.12"
    }
 }
