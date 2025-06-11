@@ -1,24 +1,10 @@
-require('total5');
 let { AlterTableBuilder, MigrationBuilder, ColumnBuilder, TableBuilder } = require('./migration-builder');
 
-global.NEWMIGRATION =  function (definition) {
-    var loc = (new Error()).stack.split('\n')[2];
-    loc = loc.split('/')[loc.split('/').length -1];
-    loc = loc.split(':')[0].trim();
-
-    let index = loc.lastIndexOf('_');
-    loc = loc > -1 ? loc.substring(index): loc;
-    
-    console.log(`🔥 NEWMIGRATION called from → ${loc}`);
-    if (!Total.migrations)
-        Total.migrations = {};
-    Total.migrations[loc] = definition;
-};
 
 function Migration(opt) {
     var t = this;
     t.options = {};
-    t.options.path = opt.path || PATH.databases('migrations');
+    t.options.path = opt.location ? PATH.root(opt.location) : PATH.databases('migrations');
     t.options.schema = opt.schema || 'public';
     t.options.table = opt.table || 'migrations';
     t.options.db = t.db = opt.db || DATA || DB();

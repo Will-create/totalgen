@@ -1,18 +1,47 @@
 require('total5');
-let { Migration } = require('./migration')
-require('./databases/migrations/status');
+const {Migration} = require('./migration');
+const CONFIG_FILE = PATH.root('tgconfig.json');
 
-require('querybuilderpg').init('default', 'postgresql://louisbertson:123456@localhost:5432/migrationdb');
+const DEFAULT_CONFIG = {
+	debug: false,
+	location: '/',
+	table: 'migrations'
+};
 
-exports.init = async function() {
-    let migration = new Migration({ debug: true, path: PATH.databases('migrations') });
+function loadConfig() {
+    return new Promise(async function(resolve) {
+        
+        Total.Fs.exists(CONFIG_FILE, function(exists) {
+            if (!exists) {
+                Total.Fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8');
+                resolve({ ...DEFAULT_CONFIG });
+            } 
 
 
-    await migration.create('users');
-    await migration.init();
-
-    migration.migrate();
-
+            try {
+                const raw = Total.Fs.readFileSync(CONFIG_FILE, 'utf8');
+                const userCfg = JSON.parse(raw);
+                resolve({ ...DEFAULT_CONFIG, ...userCfg });
+            } catch (err) {
+                console.error('[tgconfig] Erreur de lecture JSON :', err.message);
+                resolve({ ...DEFAULT_CONFIG });
+            }
+        
+        });
+    })
 }
 
-exports.init();
+
+exports.init = async function () {
+	const config = loadConfig();
+
+	const migration = new Migration({
+		debug: config.debug,
+		path: config.migrationPath,
+		table: config.tableName
+	});
+
+    await migration.init();
+
+    return migration;
+};
