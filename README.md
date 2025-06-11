@@ -1,4 +1,3 @@
-Parfait, Louis. Voici une version **simplifiée, claire et professionnelle** de ton `README.md` pour le 
 # ⚡ totalgen
 
 > A simple, powerful CLI generator for [Total.js](https://www.totaljs.com), with AI-enhanced output and custom project configuration.
