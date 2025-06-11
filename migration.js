@@ -5,6 +5,10 @@ global.NEWMIGRATION =  function (definition) {
     var loc = (new Error()).stack.split('\n')[2];
     loc = loc.split('/')[loc.split('/').length -1];
     loc = loc.split(':')[0].trim();
+
+    let index = loc.lastIndexOf('_');
+    loc = loc > -1 ? loc.substring(index): loc;
+    
     console.log(`🔥 NEWMIGRATION called from → ${loc}`);
     if (!Total.migrations)
         Total.migrations = {};
@@ -57,16 +61,17 @@ MP.create = async function(name, type) {
     let t = this;
     if (!type)
         type = 'table';
+    return new Promise(async function(resolve) {
+        let ts = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+        let filename = `${ts}_${name.toLowerCase().replace(/\s+/g, '_')}.js`
+        let path = t.options.path + '/' + filename;
+        
+        let template = await t.template(name, type);
 
-    let ts = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
-    let filename = `${ts}_${name.toLoweCase().replace(/\s+/g, '_')}.js`
-    let path = t.options.path + '/' + filename;
-    
-    let template = await t.template(name, type);
-
-    Total.Fs.createFileSync(path, template);
-    t.options.debug && t.log('Created migration: ' + filename);
-    return filename;
+        Total.Fs.writeFileSync(path, template);
+        t.options.debug && t.log('Created migration: ' + filename);
+        resolve(filename);
+    });
 };
 
 
@@ -76,21 +81,20 @@ MP.create = async function(name, type) {
 MP.template = function(name, type) {
     let t = this;
     return new Promise(function(resolve) {
-        let classname = name.split('_').map(word => word.charAt(0).toUpperCase().slice(1).join(''));
         let template;
 
         switch(type) {
             case 'table': 
-                template = this.tabletemplate(classname, name);
+                template = t.tabletemplate(name);
                 break;
             case 'alter': 
-                template = this.altertemplate(classname, name);
+                template = t.altertemplate(name);
                 break;
             case 'schema':
-                templace = this.schematemplate(classname, name);
+                templace = t.schematemplate(name);
                 break;
             default:
-                template = this.defaulttemplate(classname, name);
+                template = t.defaulttemplate(name);
                 
         }
 
@@ -99,7 +103,7 @@ MP.template = function(name, type) {
 };
 
 
-MP.tabletemplate = function(classname, name) {
+MP.tabletemplate = function(name) {
     return `// Migration: create ${name} table;
 NEWMIGRATION({
     up: async function(migration) {
@@ -107,7 +111,7 @@ NEWMIGRATION({
             table.id();
             table.string('name', 100).notnull();
             table.string('email').unique();
-            table.timestamp();
+            table.timestamps();
 
             // Define your own table structure here
             
@@ -129,7 +133,7 @@ NEWMIGRATION({
 `;
 }
 
-MP.altertemplate = function(classname, name) {
+MP.altertemplate = function(name) {
 
     return `// Migration: alter ${name} table;
 NEWMIGRATION({
@@ -155,7 +159,7 @@ NEWMIGRATION({
 };
 
 
-MP.schematemplate = function(classname, name) {
+MP.schematemplate = function(name) {
 
     return `// Schema Migration: ${name} ;
 NEWMIGRATION({
@@ -177,9 +181,9 @@ NEWMIGRATION({
 };
 
 
-MP.schematemplate = function(classname) {
+MP.schematemplate = function() {
 
-    return `// Migration: ${classname} ;
+    return `// Schema Migration ;
 NEWMIGRATION({
    up: async (migration) => {
         // Your migration logic here

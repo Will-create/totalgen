@@ -4,11 +4,15 @@ require('./databases/migrations/status');
 
 require('querybuilderpg').init('default', 'postgresql://louisbertson:123456@localhost:5432/migrationdb');
 
-async function main() {
+exports.init = async function() {
     let migration = new Migration({ debug: true, path: PATH.databases('migrations') });
+
+
+    await migration.create('users');
     await migration.init();
-    migration.rollback();
+
+    migration.migrate();
 
 }
 
-main();
+exports.init();
