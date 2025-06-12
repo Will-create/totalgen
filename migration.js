@@ -1,10 +1,30 @@
 let { AlterTableBuilder, MigrationBuilder, ColumnBuilder, TableBuilder } = require('./migration-builder');
 
 
+if (!Total.migrations) {
+    Total.migrations = {};
+}
+
+global.NEWMIGRATION = function(obj) {
+    // simulate error in order to catch the migration file name from the stack trace
+    const locStack = (new Error()).stack.split('\n')[2];
+    const locFile  = locStack.split('/').pop().split(':')[0].trim();
+    const index    = locFile.lastIndexOf('_');
+    const loc      = index > -1 ? locFile.substring(index) : locFile;
+
+    if (!obj || !obj.up || typeof obj.up !== 'function') {
+        throw new Error('Migration object must have an "up" function');
+    }
+    if (!obj.down || typeof obj.down !== 'function') {
+        throw new Error('Migration object must have a "down" function');
+    }
+    console.log('Registering migration:', loc);
+    Total.migrations[loc] = obj;
+};
 function Migration(opt) {
     var t = this;
     t.options = {};
-    t.options.path = opt.location ? PATH.root(opt.location) : PATH.databases('migrations');
+    t.options.path = opt.location ? PATH.root(opt.location) : PATH.root('migrations');
     t.options.schema = opt.schema || 'public';
     t.options.table = opt.table || 'migrations';
     t.options.db = t.db = opt.db || DATA || DB();
@@ -194,15 +214,14 @@ MP.migrate = async function() {
         return;
     }
 
-    console.log(pending);
-
     let batch = await t.$getnextbatch();
 
     pending && pending.wait(async function(migration, next) {
 
         t.log('Migrating: ' + migration);
-
+        t.log(Total.migrations);
         let instance = Total.migrations[migration];
+        t.log(instance);
         let builder = new MigrationBuilder(t.db, t.options);
         
         await instance.up(builder);

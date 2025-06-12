@@ -29,12 +29,58 @@ function loadConfig() {
         
         });
     })
+};
+
+// load migrations
+function loadmigrations(config) {
+    return new Promise(async function(resolve) {
+        const migrationPath = PATH.root(config.location + 'migrations');
+        const migrations = [];
+        
+        if (Total.Fs.existsSync(migrationPath)) {
+            const files = Total.Fs.readdirSync(migrationPath);
+            files.forEach(file => {
+                if (file.endsWith('.js')) {
+                    console.log('Loading migration:', file);
+                    require(migrationPath + '/' + file);
+                }
+            });
+        }
+        
+        resolve(migrations);
+    });
 }
 
 
-exports.init = async function () {
-	const config = loadConfig();
+exports.migration = async function () {
+    const config = await loadConfig();
+    const migrations = await loadmigrations(config);
+    let databaselink;
 
+    if (config.db && config.db.link) {
+        databaselink = config.db.link;
+    } else {
+        databaselink = 'postgres://';
+
+        if (config.db.user) {
+            databaselink += config.db.user;
+            if (config.db.password) {
+                databaselink += ':' + config.db.password;
+            }
+            databaselink += '@';
+        }
+        if (config.db.host) {
+            databaselink += config.db.host;
+        }
+        if (config.db.port) {
+            databaselink += ':' + config.db.port;
+        }
+        if (config.db.database) {
+            databaselink += '/' + config.db.database;
+        }
+    }
+
+    require('querybuilderpg').init('', databaselink, ERROR('TG Migration'));
 	const migration = new Migration({
 		debug: config.debug,
 		path: config.migrationPath,
@@ -45,8 +91,17 @@ exports.init = async function () {
 
     return migration;
 };
+exports.migrate = async function () {
+    const migration = await exports.migration();
+    try {
+        await migration.migrate();
+    } catch (err) {
+        console.error('Error during migration:', err.message);
+    }
+};
+
 exports.createmigration = async function (name) {
-    const migration = await exports.init();
+    const migration = await exports.migration();
     if (!name) {
         console.error('Plese provide a name for you migration.');
         return;
@@ -57,3 +112,38 @@ exports.createmigration = async function (name) {
         console.error('Erreur lors de la création de la migration :', err.message);
     }
 };
+
+exports.tginit = function () {
+    return new Promise(async function(resolve, reject) {
+        if (Total.Fs.existsSync(CONFIG_FILE)) {
+        resolve('[tginit] Config file already exists at', CONFIG_FILE);
+    }
+
+    const INIT_CONFIG = {
+        debug: false,
+        location: '/',
+        table: 'migrations',
+        db: {
+            host: 'localhost',
+            port: 5432,
+            user: 'postgres',
+            password: 'postgres',
+            database: 'tgconfig',
+            link: "postgresql://user:password@hostname:5432/database"
+        }
+    };
+
+    try {
+        Total.Fs.writeFileSync(CONFIG_FILE, JSON.stringify(INIT_CONFIG, null, 2), 'utf8');
+        resolve('[tginit] Config file created successfully at', CONFIG_FILE);
+    } catch (err) {
+        reject('[tginit] Failed to create config file:', err.message);
+    }
+    });
+};
+
+exports.config = async function () {
+    const config = await loadConfig();
+    console.log('Current Total Gen configuration:');
+    return config;
+}

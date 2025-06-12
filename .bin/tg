@@ -1,6 +1,5 @@
 #! /usr/bin/env node
-
-require('total5');
+const TG = require('../index');
 
 const ARGS = process.argv; // TEST: ['-', '-', 'CMD']
 let subcmd;
@@ -10,10 +9,11 @@ function done(err) {
 	err && console.error('ERROR:', err);
 	console.timeEnd('[Done]');
 }
-  
 
-function load(args) {
 
+async function load(args) {
+	var global = global || {};
+	global.tgconfig = await TG.config();
 	var cmd = (args[2] || '').replace(/-{2,}/g, '');
 	var arg = [];
 	for (let i = 3; i < args.length; i++)
@@ -38,13 +38,13 @@ function load(args) {
 	console.log('* Total Gen: [' + cmd.capitalize() + ']');
 	console.time('[Done]');
 	const params = subcmd ? [subcmd, ...arg] : arg; 
-	var global = global || {};
 	var fn = FUNC[cmd];
 	fn && fn.apply(global, params);
 }
 
 
 FUNC.help = function() {
+	console.log('init                                   	: Initialize Total Gen');
 	console.log('generate                                   : Generate code templates');
 	done();
 };
@@ -66,13 +66,12 @@ FUNC.generate = function() {
 		return done();
 	}
 
-	let index = require('../index');
 	switch (subcmd) {
 		case 'resource':
-			index.resource(args);
+			TG.resource(args);
 			break;
 		case 'migration':
-			index.createmigration(args);
+			TG.createmigration(args);
 			break;
 		default:
 			console.error('Unknown subcommand:', subcmd);
@@ -82,5 +81,19 @@ FUNC.generate = function() {
 	done();
 }
 
+FUNC.init = function() {
+	console.log('Initializing Total Gen...');
+	TG.tginit().then(() => {
+		console.log('Total Gen initialized successfully.');
+		done();
+	}).catch(err => {
+		console.error('Error initializing Total Gen:', err);
+		done(err);
+	});
+};
+
+FUNC.migrate = function() {
+	TG.migrate();
+}
 
 setTimeout(load, 10, ARGS);
