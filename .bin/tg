@@ -29,9 +29,7 @@ async function load(args) {
 		}
 		cmd = split[0].trim();
 		subcmd = split[1].trim();
-	}
-
-
+	
 	if (!cmd)
 		cmd = 'help';
 
