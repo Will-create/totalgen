@@ -1,6 +1,5 @@
 #! /usr/bin/env node
 const TG = require('../index');
-
 const ARGS = process.argv; // TEST: ['-', '-', 'CMD']
 let subcmd;
 
@@ -30,14 +29,15 @@ async function load(args) {
 		cmd = split[0].trim();
 		subcmd = split[1].trim();
 	
-	if (!cmd)
-		cmd = 'help';
+		if (!cmd)
+			cmd = 'help';
 
-	console.log('* Total Gen: [' + cmd.capitalize() + ']');
-	console.time('[Done]');
-	const params = subcmd ? [subcmd, ...arg] : arg; 
-	var fn = FUNC[cmd];
-	fn && fn.apply(global, params);
+		console.log('* Total Gen: [' + cmd.capitalize() + ']');
+		console.time('[Done]');
+		const params = subcmd ? [subcmd, ...arg] : arg; 
+		var fn = FUNC[cmd];
+		fn && fn.apply(global, params);
+	}
 }
 
 
