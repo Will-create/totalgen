@@ -38,26 +38,53 @@ MBP.altertable = async function(name, callback) {  // Fixed: added callback para
     console.log('Table ' + name + ' altered successfully');
 };
 
-
 MBP.droptable = async function(name) {
     var t = this;
     const sql = `DROP TABLE IF EXISTS ${this.schema}.${name} CASCADE`;
     await t.db.query(sql);
     console.log(`Table '${name}' dropped successfully`);        
 };
-
-MBP.executeRaw = async function(sql, params = []) {
+// 18. Transaction support
+MBP.transaction = async function(callback) {
     var t = this;
-    await t.db.query(sql, params);
+    await t.db.query('BEGIN').promise();
+    try {
+        await callback(t);
+        await t.db.query('COMMIT').promise();
+    } catch (error) {
+        await t.db.query('ROLLBACK').promise();
+        throw error;
+    }
+};
+
+// 19. Schema operations
+MBP.createschema = async function(name) {
+    var t = this;
+    const sql = `CREATE SCHEMA IF NOT EXISTS ${name}`;
+    await t.db.query(sql).promise();
+    console.log(`Schema '${name}' created successfully`);
+};
+
+MBP.dropschema = async function(name, cascade = false) {
+    var t = this;
+    const sql = `DROP SCHEMA IF EXISTS ${name}${cascade ? ' CASCADE' : ''}`;
+    await t.db.query(sql).promise();
+    console.log(`Schema '${name}' dropped successfully`);
+};
+
+
+MBP.executeRaw = MBP.exec = MBP.raw = async function(sql, params = []) {
+    var t = this;
+    await t.db.query(sql, params).promise();
     return; 
 };
 
-MBP.tableExists = async function(name) {
+MBP.exists = async function(table) {
     var t = this;
     const sql = `
         SELECT EXISTS (
             SELECT FROM information_schema.tables 
-            WHERE table_schema = ${t.schema} AND table_name = ${name}
+            WHERE table_schema = ${t.schema} AND table_name = ${table}
         )
     `;
     
@@ -65,12 +92,12 @@ MBP.tableExists = async function(name) {
     return response[0] ? true : false;
 };
 
-MBP.getTableColumns = async function(name) {
+MBP.getcolumns = async function(table) {
     var t = this;
     const sql = `
         SELECT column_name, data_type, is_nullable, column_default
         FROM information_schema.columns
-        WHERE table_schema = ${t.schema} AND table_name = ${name}
+        WHERE table_schema = ${t.schema} AND table_name = ${table}
         ORDER BY ordinal_position
     `;
     
@@ -93,7 +120,9 @@ var TBP = TableBuilder.prototype;
 
 TBP.id = function(name) {
     var t = this;
-    t.columns.push({ name: name || 'id', type: 'TEXT'});
+    var col = new ColumnBuilder(name || 'id', 'SERIAL');
+    col.modifiers.push('PRIMARY KEY');
+    t.columns.push(col);
     return t;
 };
 
@@ -248,7 +277,153 @@ TBP.unique =  function(columns, name) {
     return t;
 };
 
-TBP.tosql =  function() {
+// UUID type and primary key support
+TBP.uuid = function(name) {
+    var t = this;
+    var col = new ColumnBuilder(name || 'id', 'UUID');
+    t.columns.push(col);
+    return col;
+};
+// Primary key with UUID
+TBP.puuid = function(name) {
+    var t = this;
+    var col = new ColumnBuilder(name || 'id', 'UUID DEFAULT gen_random_uuid()');
+    col.modifiers.push('PRIMARY KEY');
+    t.columns.push(col);
+    return col;
+};
+
+// Auto-incrementing primary key
+TBP.increments = function(name) {
+    var t = this;
+    var col = new ColumnBuilder(name || 'id', 'SERIAL PRIMARY KEY');
+    t.columns.push(col);
+    return col;
+};
+
+TBP.bigincrements = function(name) {
+    var t = this;
+    var col = new ColumnBuilder(name || 'id', 'BIGSERIAL PRIMARY KEY');
+    t.columns.push(col);
+    return col;
+};
+
+TBP.timestamptz = function(name) {
+    var t = this;
+    var col = new ColumnBuilder(name, 'TIMESTAMPTZ');
+    t.columns.push(col);
+    return col;
+};
+
+// More date/time types
+TBP.interval = function(name) {
+    var t = this;
+    var col = new ColumnBuilder(name, 'INTERVAL');
+    t.columns.push(col);
+    return col;
+};
+
+// Binary/blob types
+TBP.binary = function(name) {
+    var t = this;
+    var col = new ColumnBuilder(name, 'BYTEA');
+    t.columns.push(col);
+    return col;
+};
+
+// Array types
+TBP.array = function(name, type) {
+    var t = this;
+    var col = new ColumnBuilder(name, `${type.toUpperCase()}[]`);
+    t.columns.push(col);
+    return col;
+};
+
+// IP address types
+TBP.ip = function(name) {
+    var t = this;
+    var col = new ColumnBuilder(name, 'INET');
+    t.columns.push(col);
+    return col;
+};
+// MAC address type
+TBP.mac = function(name) {
+    var t = this;
+    var col = new ColumnBuilder(name, 'MACADDR');
+    t.columns.push(col);
+    return col;
+};
+
+// Geometry types (PostGIS)
+TBP.point = function(name) {
+    var t = this;
+    var col = new ColumnBuilder(name, 'POINT');
+    t.columns.push(col);
+    return col;
+};
+
+TBP.geometry = function(name, type) {
+    var t = this;
+    var col = new ColumnBuilder(name, type || 'GEOMETRY');
+    t.columns.push(col);
+    return col;
+};
+
+// Custom primary key method
+TBP.primary = function(columns) {
+    var t = this;
+    var cols = Array.isArray(columns) ? columns.join(', ') : columns;
+    t.constraints.push(`PRIMARY KEY (${cols})`);
+    return t;
+};
+
+// Check constraints
+TBP.check = function(name, expression) {
+    var t = this;
+    t.constraints.push(`CONSTRAINT ${name} CHECK (${expression})`);
+    return t;
+};
+
+// Full-text search
+TBP.tsvector = function(name) {
+    var t = this;
+    var col = new ColumnBuilder(name, 'TSVECTOR');
+    t.columns.push(col);
+    return col;
+};
+
+// Morphs (polymorphic relationships)
+TBP.morphs = function(name) {
+    var t = this;
+    t.columns.push(new ColumnBuilder(name + '_type', 'VARCHAR(255)'));
+    t.columns.push(new ColumnBuilder(name + '_id', 'BIGINT'));
+    t.index([name + '_type', name + '_id']);
+    return t;
+};
+
+// Remember token (for authentication)
+TBP.remember = function() {
+    var t = this;
+    var col = new ColumnBuilder('remember_token', 'VARCHAR(100)');
+    col.nullable();
+    t.columns.push(col);
+    return col;
+};
+
+// Nullable timestamps
+TBP.nullabletimestamps = function() {
+    var t = this;
+    var created = new ColumnBuilder('dtcreated', 'TIMESTAMP');
+    var updated = new ColumnBuilder('dtupdated', 'TIMESTAMP');
+    created.nullable();
+    updated.nullable();
+    t.columns.push(created);
+    t.columns.push(updated);
+    return t;
+};
+
+// Fix typo in tosql method
+TBP.tosql = function() {
     var t = this;
     var definitions = t.columns.map(function(col) {
         if (typeof col === 'string') return col;
@@ -256,26 +431,23 @@ TBP.tosql =  function() {
         return `${col.name} ${col.type}`;
     });
 
-    let constraints = t.constraints.filter(c=>!c.startsWith('--'));
+    let constraints = t.constraints.filter(c => !c.startsWith('--'));
 
     var sql = `CREATE TABLE ${t.schema}.${t.name} (\n`;
-    sql += '    ' + definitions.join(',\n  ');
+    sql += '    ' + definitions.join(',\n    ');
 
-   // Add primary key if 'id' column exists
-    if (t.columns.some(col => col.name === 'id')) 
-        sql += ',\n    PRIMARY KEY (id),\n';
-    
 
     if (constraints.length > 0)
-        sql += ',\n    ' + constraints.join(',\n   ');
+        sql += ',\n    ' + constraints.join(',\n    ');
     
     sql += '\n)';
 
     for (const index of t.indexes) 
-        sql += `;\nCREATE ${index.type} ${index.name} 0N ${t.schema}.${t.name} (${index.columns})`;
+        sql += `;\nCREATE ${index.type} ${index.name} ON ${t.schema}.${t.name} (${index.columns})`; // Fixed: ON instead of 0N
 
     return sql;
 };
+
 
 function ColumnBuilder(name, type) {
     var t = this;
@@ -291,6 +463,22 @@ CBP.notnull = function() {
     t.modifiers.push('NOT NULL');
     return t;
 };
+
+CBP.primary = function() {
+    var t = this;
+    t.modifiers.push('PRIMARY KEY');
+    return t;
+};
+CBP.autoincrement = function() {
+    var t = this;
+    if (t.type.toUpperCase() === 'SERIAL' || t.type.toUpperCase() === 'BIGSERIAL') {
+        t.modifiers.push('AUTOINCREMENT');
+    } else {
+        throw new Error('Auto-increment can only be used with SERIAL or BIGSERIAL types');
+    }
+    return t;
+};
+
 
 CBP.nullable = CBP.setnull = function() {
     var t = this;
@@ -316,10 +504,17 @@ CBP.unique = function() {
 CBP.references = function(columns) {
     return new ReferenceBuilder(this, columns);
 };
-
-CBP.tosql = function() {
-    return `${this.name} ${this.type} ${this.modifiers.join(' ')}`.trim();
+CBP.comment = function(text) {
+    var t = this;
+    t.comment_text = text;
+    return t;
 };
+CBP.tosql = function() {
+    var sql = `${this.name} ${this.type} ${this.modifiers.join(' ')}`.trim();
+    // Note: Comments would need to be added as separate ALTER TABLE statements
+    return sql;
+};
+
 
 function ReferenceBuilder(column, reference) {
     this.col = column;
@@ -479,6 +674,29 @@ ATBP.addforeignkey = function(column, reftable, refcol, constraintname) {
 ATBP.dropforeignkey = function(constraintname) {
     this.operations.push(`ALTER TABLE ${this.schema}.${this.tablename} DROP CONSTRAINT ${constraintname}`);
     return this;
+};
+
+
+// Add more AlterTable methods
+ATBP.addtimestamps = function() {
+    var t = this;
+    t.operations.push(`ALTER TABLE ${t.schema}.${t.tablename} ADD COLUMN dtcreated TIMESTAMP DEFAULT now()`);
+    t.operations.push(`ALTER TABLE ${t.schema}.${t.tablename} ADD COLUMN dtupdated TIMESTAMP`);
+    return t;
+};
+
+ATBP.droptimestamps = function() {
+    var t = this;
+    t.operations.push(`ALTER TABLE ${t.schema}.${t.tablename} DROP COLUMN IF EXISTS dtcreated`);
+    t.operations.push(`ALTER TABLE ${t.schema}.${t.tablename} DROP COLUMN IF EXISTS dtupdated`);
+    return t;
+};
+
+ATBP.addsoftdeletes = function() {
+    var t = this;
+    t.operations.push(`ALTER TABLE ${t.schema}.${t.tablename} ADD COLUMN dtremoved TIMESTAMP`);
+    t.operations.push(`ALTER TABLE ${t.schema}.${t.tablename} ADD COLUMN isremoved BOOLEAN DEFAULT FALSE`);
+    return t;
 };
 
 ATBP.getoperations =  function() {
