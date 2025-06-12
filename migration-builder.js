@@ -24,11 +24,10 @@ MBP.createtable = async function(name, callback) {
     console.log('Table ' + name + ' created successfully');
 };
 
-MBP.altertable = async function(name, schema) {
+MBP.altertable = async function(name, callback) {  // Fixed: added callback parameter
     var t = this;
-    const builder = new AlterTableBuilder(name, t.schama);
+    const builder = new AlterTableBuilder(name, t.schema);  // Fixed: t.schema instead of t.schama
     callback && callback(builder);
-
 
     var operations = builder.getoperations();
 
@@ -38,6 +37,7 @@ MBP.altertable = async function(name, schema) {
 
     console.log('Table ' + name + ' altered successfully');
 };
+
 
 MBP.droptable = async function(name) {
     var t = this;
@@ -95,6 +95,14 @@ TBP.id = function(name) {
     var t = this;
     t.columns.push({ name: name || 'id', type: 'TEXT'});
     return t;
+};
+
+TBP.enum = function(name, values) {
+    var t = this;
+    var enumValues = values.map(v => `'${v}'`).join(', ');
+    var col = new ColumnBuilder(name, `VARCHAR(255) CHECK (${name} IN (${enumValues}))`);
+    t.columns.push(col);
+    return col;
 };
 
 TBP.string = function(name, length) {
@@ -193,19 +201,15 @@ TBP.email = function(name) {
     var t = this;
     var col = new ColumnBuilder(name, 'VARCHAR(255)');
     t.columns.push(col);
-
     t.constraints.push(`CONSTRAINT ${t.name}_${name}_email_check CHECK (${name} ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')`);
-
     return col;
 };
 
 TBP.timestamps = function() {
     var t = this;
-
     t.columns.push({ name: 'dtcreated', type: 'TIMESTAMP DEFAULT now()'});
     t.columns.push({ name: 'dtupdated', type: 'TIMESTAMP'});
     t.constraints.push('-- Triger for dtupdated will be create separately');
-
     return t;
 };
 
@@ -256,6 +260,11 @@ TBP.tosql =  function() {
 
     var sql = `CREATE TABLE ${t.schema}.${t.name} (\n`;
     sql += '    ' + definitions.join(',\n  ');
+
+   // Add primary key if 'id' column exists
+    if (t.columns.some(col => col.name === 'id')) 
+        sql += ',\n    PRIMARY KEY (id),\n';
+    
 
     if (constraints.length > 0)
         sql += ',\n    ' + constraints.join(',\n   ');
