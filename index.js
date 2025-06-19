@@ -41,7 +41,6 @@ function loadmigrations(config) {
             const files = Total.Fs.readdirSync(migrationPath);
             files.forEach(file => {
                 if (file.endsWith('.js')) {
-                    console.log('Loading migration:', file);
                     require(migrationPath + '/' + file);
                 }
             });
@@ -99,6 +98,15 @@ exports.migrate = async function () {
         console.error('Error during migration:', err.message);
     }
 };
+exports.rollback = async function () {
+    const migration = await exports.migration();
+    try {
+        await migration.rollback();
+    } catch (err) {
+        console.error('Error during rollback:', err.message);
+    }
+};
+
 
 exports.createmigration = async function (arg) {
     let name = arg[0]; 

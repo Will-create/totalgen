@@ -38,6 +38,7 @@ MBP.altertable = async function(name, callback) {  // Fixed: added callback para
 
 MBP.droptable = async function(name) {
     var t = this;
+     name = name.indexOf(t.opt.prefix) == -1 ? t.opt.prefix + name : name;
     const sql = `DROP TABLE IF EXISTS ${this.schema}.${name} CASCADE`;
     await t.db.query(sql);
     console.log(`Table '${name}' dropped successfully`);        

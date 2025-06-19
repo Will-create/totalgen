@@ -20,7 +20,6 @@ global.NEWMIGRATION = function(obj) {
     if (!obj.down || typeof obj.down !== 'function') {
         throw new Error('Migration object must have a "down" function');
     }
-    console.log('Registering migration:', loc);
     Total.migrations[loc] = obj;
 };
 function Migration(opt) {

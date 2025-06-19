@@ -33,11 +33,11 @@ async function load(args) {
 			cmd = 'help';
 	} 
 
-		console.log('* Total Gen: [' + cmd.capitalize() + ']');
-		console.time('[Done]');
-		const params = subcmd ? [subcmd, ...arg] : arg; 
-		var fn = FUNC[cmd];
-		fn && fn.apply(global, params);
+	console.log('* Total Gen: [' + cmd.capitalize() + ']');
+	console.time('[Done]');
+	const params = subcmd ? [subcmd, ...arg] : arg; 
+	var fn = FUNC[cmd];
+	fn && fn.apply(global, params);
 }
 
 
@@ -90,8 +90,43 @@ FUNC.init = function() {
 	});
 };
 
-FUNC.migrate = function() {
-	TG.migrate();
+FUNC.migrate = async function() {
+	await TG.migrate();
+};
+
+
+FUNC.migration = async function() {
+	let args = Array.from(arguments).slice(1);
+	// handle sub help
+	if (subcmd === 'help') {
+		console.log('Usage: tg migration:<subcommand> [options]');
+		console.log('Subcommands:');
+		console.log('migration:migrate   : Run migration operation');
+		console.log('migration:rollback   : Revert all migrations');
+		done();
+		return;
+	}
+	if (!subcmd) {
+		console.error('Please specify a subcommand for "migration".');
+		return done();
+	}
+
+	switch (subcmd) {
+		case 'rollback':
+			await TG.rollback(args);
+			done();
+			break;
+		case 'migrate':
+			await TG.migrate(args);
+			done();
+			break;
+		default:
+			console.error('Unknown subcommand:', subcmd);
+			break;
+	}
+
 }
+
+FUNC.rollback
 
 setTimeout(load, 10, ARGS);
