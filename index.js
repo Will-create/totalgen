@@ -100,7 +100,8 @@ exports.migrate = async function () {
     }
 };
 
-exports.createmigration = async function (name) {
+exports.createmigration = async function (arg) {
+    let name = arg[0]; 
     const migration = await exports.migration();
     if (!name) {
         console.error('Plese provide a name for you migration.');
