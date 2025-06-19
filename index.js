@@ -145,6 +145,5 @@ exports.tginit = function () {
 
 exports.config = async function () {
     const config = await loadConfig();
-    console.log('Current Total Gen configuration:');
     return config;
 }

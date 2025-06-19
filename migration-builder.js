@@ -17,9 +17,7 @@ MBP.createtable = async function(name, callback) {
     name = name.indexOf(t.opt.prefix) == -1 ? t.opt.prefix + name : name;
     var builder = new TableBuilder(name, t.schema);
     callback && callback(builder);
-
     var sql = builder.tosql();
-    console.log(sql);
     await t.db.query(sql).promise();
     console.log('Table ' + name + ' created successfully');
 };
@@ -156,17 +154,18 @@ TBP.integer = function(name) {
     return column;
 };
 
-TBP.biginteger = async function(name) {
+TBP.biginteger = function(name) {
     var t = this;
     var column = new ColumnBuilder(name, 'BIGINT');
     t.columns.push(column);
     return column;
 };
 
-TBP.boolean = async function(name) {
+TBP.boolean = function(name) {
     var t = this;
     var col = new ColumnBuilder(name, 'BOOLEAN');
     t.columns.push(col);
+
     return col;
 };
 
@@ -493,7 +492,7 @@ CBP.default = function(value) {
     else
         t.modifiers.push(`DEFAULT ${value}`);
 
-    return this;
+    return t;
 };
 
 CBP.unique = function() {

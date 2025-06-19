@@ -9,9 +9,11 @@ global.NEWMIGRATION = function(obj) {
     // simulate error in order to catch the migration file name from the stack trace
     const locStack = (new Error()).stack.split('\n')[2];
     const locFile  = locStack.split('/').pop().split(':')[0].trim();
-    const index    = locFile.lastIndexOf('_');
-    const loc      = index > -1 ? locFile.substring(index) : locFile;
 
+    // const index    = locFile.lastIndexOf('_');
+    // const loc      = index > -1 ? locFile.substring(index) : locFile;
+
+    loc = locFile;
     if (!obj || !obj.up || typeof obj.up !== 'function') {
         throw new Error('Migration object must have an "up" function');
     }

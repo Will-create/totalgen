@@ -31,13 +31,13 @@ async function load(args) {
 	
 		if (!cmd)
 			cmd = 'help';
+	} 
 
 		console.log('* Total Gen: [' + cmd.capitalize() + ']');
 		console.time('[Done]');
 		const params = subcmd ? [subcmd, ...arg] : arg; 
 		var fn = FUNC[cmd];
 		fn && fn.apply(global, params);
-	}
 }
 
 
