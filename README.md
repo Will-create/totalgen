@@ -57,6 +57,14 @@ You can place a `tgconfig.json` at the root of your project:
   "debug": false,
   "location": "/",
   "table": "migrations",
+  "db": {
+    "host": "localhost",
+    "port": 5432,
+    "user": "postgres",
+    "password": "postgres",
+    "database": "tgconfig",
+    "link": "postgresql://user:password@hostname:5432/database"
+  },
   "ai": {
     "enabled": true,
     "provider": "openai",
