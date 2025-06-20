@@ -139,6 +139,13 @@ exports.tginit = function () {
             password: 'postgres',
             database: 'tgconfig',
             link: "postgresql://user:password@hostname:5432/database"
+        },
+        ai: {
+            enabled: false,
+            provider: 'openai',
+            baseUrl: 'https://api.openai.com/v1',
+            model: 'gpt-3.5-turbo',
+            apiKey: ''
         }
     };
 
