@@ -1,3 +1,4 @@
+const { AIEnhancer } = require('./ai');
 let { AlterTableBuilder, MigrationBuilder, ColumnBuilder, TableBuilder } = require('./migration-builder');
 
 
@@ -32,6 +33,8 @@ function Migration(opt) {
     t.options.debug = opt.debug || false;
     t.options.database = opt.databse || 'postgresql';
     t.schemas = {};
+    t.aiconf = opt.ai || {};
+
 
     t.options.prefix = opt.ignoreprefix ? '' : 'tbl_';
     t.$migrationtable = t.options.table.indexOf(t.options.prefix) == -1 ? t.options.prefix + t.options.table.toLowerCase() : t.options.table.toLoweCase();
@@ -43,6 +46,7 @@ let MP = Migration.prototype;
 // Initializing the migrations by creating a migrations table
 MP.init = function() {
     let t = this;
+    t.initAI();
     return new Promise(function(resolve) {
         let table = t.options.database == 'postgresql' ? t.options.schema.toLowerCase() + '.' + t.$migrationtable : t.$migrationtable;
         let query =  `
@@ -64,10 +68,9 @@ MP.init = function() {
 };
 
 
-MP.create = async function(name, type) {
+MP.create = async function(name, type, prompt) {
     let t = this;
-    if (!type)
-        type = 'table';
+
     return new Promise(async function(resolve) {
         let ts = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
         let filename = `${ts}_${name.toLowerCase().replace(/\s+/g, '_')}.js`
@@ -75,17 +78,34 @@ MP.create = async function(name, type) {
         
         let template = await t.template(name, type);
 
+        
+        // AI enhancement if prompt is provided and ai enabled
+
+        if (prompt && t.aiconf && t.aiconf.enabled) {
+            t.options.debug && t.log('Enhancing template with AI');
+            const enhancer = new AIEnhancer(t.options);
+            template = await enhancer.enhance(template, prompt, type, name);
+            t.options.debug && t.log('Template is enhanced successfully');
+        }
+
+
         Total.Fs.writeFileSync(path, template);
         t.options.debug && t.log('Created migration: ' + filename);
         resolve(filename);
     });
 };
 
+MP.initAI = function() {
+    let t =  this;
+    if (t.options.ai.enabled && !t.options.ai.apikey) {
+        console.warn('AI Enhancement is enabled but no API key is provided');
+        t.aiconf.enabled = false;
+    }
+}
 
 
 
-
-MP.template = function(name, type) {
+ MP.template = function(name, type) {
     let t = this;
     return new Promise(function(resolve) {
         let template;

@@ -49,13 +49,30 @@ FUNC.help = function() {
 
 FUNC.generate = function() {
 	let args = Array.from(arguments).slice(1);
+
+	let prompt;
+
+	if (args.includes('--prompt')) {
+		let index = args.indexOf('--prompt');
+		prompt = args[index + 1];
+	}
+
+
+	if (args.includes('-p')) {
+		let index = args.indexOf('-p');
+		prompt = args[index + 1];
+	}
+
 	console.log(args);
 	// handle sub help
 	if (subcmd === 'help') {
 		console.log('Usage: tg generate:<subcommand> [options]');
 		console.log('Subcommands:');
-		console.log('generate:resource   : Generate a resource template');
-		console.log('generate:migration  : Generate a migration template');
+		console.log('generate:resource               : Generate a resource template');
+		console.log('generate:migration              : Generate a migration template');
+		console.log('');
+		console.log('Options:');
+		console.log('--prompt "Your prompt here"     :Enhance with AI using custom prompt');
 		done();
 		return;
 	}
@@ -65,11 +82,17 @@ FUNC.generate = function() {
 	}
 
 	switch (subcmd) {
-		case 'resource':
-			TG.resource(args);
+		case 'controller':
+			TG.generatecontroller(args, prompt);
 			break;
 		case 'migration':
-			TG.createmigration(args);
+			TG.createmigration(args, prompt);
+			break;
+		case 'schema':
+			TG.generateschema(args, prompt);
+			break;
+		case 'plugin':
+			TG.generateplugin(args, prompt);
 			break;
 		default:
 			console.error('Unknown subcommand:', subcmd);
