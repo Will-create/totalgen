@@ -22,10 +22,21 @@ tg <command> <name> [--prompt="enhance with AI"]
 
 ### ✅ Examples
 
+
+- Template files generation commands
+
 ```bash
 tg generate:migration create_users_table
 tg generate:controller user
 tg generate:plugin auth --prompt="secure JWT login system"
+```
+
+- Migrations specific commands
+
+```sh
+tg migrate                   # Run migrations
+tg migration:migrate         # Run migrations
+tg migration:rollback        # Run migrations rollback operation to revert
 ```
 
 ---
