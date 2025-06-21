@@ -8,7 +8,7 @@
 
 ```bash
 npm install -g totalgen
-````
+```
 
 ---
 
