@@ -110,6 +110,16 @@ exports.rollback = async function () {
 
 exports.createmigration = async function (arg) {
     let name = arg[0]; 
+
+    // add support for many names with spaces or commas and run create for each
+    if (name && name.includes(',')) {
+        const names = name.split(',').map(n => n.trim());
+        for (const n of names) {
+            await exports.createmigration([n]);
+        }
+        return;
+    }
+
     const migration = await exports.migration();
     if (!name) {
         console.error('Plese provide a name for you migration.');
