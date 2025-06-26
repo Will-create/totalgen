@@ -1,5 +1,4 @@
-require("total4");
-
+require("total5");
 function AI(config) {
     this.config = config;
     this.provider = config.provider || 'openai';
