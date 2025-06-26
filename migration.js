@@ -101,12 +101,12 @@ MP.initAI = function() {
         console.warn('AI Enhancement is enabled but no API key is provided');
         t.aiconf.enabled = false;
     }
-}
+};
 
-
-
- MP.template = function(name, type) {
+ MP.template = function(name, type = 'table') {
     let t = this;
+
+    
     return new Promise(function(resolve) {
         let template;
 
