@@ -97,7 +97,7 @@ MP.create = async function(name, type, prompt) {
 
 MP.initAI = function() {
     let t =  this;
-    if (t.options.ai.enabled && !t.options.ai.apikey) {
+    if (t.options.ai && t.options.ai.enabled && !t.options.ai.apikey) {
         console.warn('AI Enhancement is enabled but no API key is provided');
         t.aiconf.enabled = false;
     }
