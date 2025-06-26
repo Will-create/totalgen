@@ -160,6 +160,13 @@ NEWMIGRATION({
 `;
 }
 
+
+MP.defaulttemplate = function(name) {
+    return `//create ${name} file;
+// Your total.js script for ${name} migration here
+    `;
+}
+
 MP.altertemplate = function(name) {
 
     return `// Migration: alter ${name} table;
