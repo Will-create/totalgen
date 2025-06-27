@@ -242,6 +242,12 @@ TBP.timestamps = function() {
     return t;
 };
 
+TBP.search = function() {
+    var t = this;
+    t.columns.push({ name: 'search', type: 'TEXT'});
+    return t;
+};
+
 TBP.softdeletes = function() {
     var t = this;
     var dtremoved = new ColumnBuilder('dtremoved', 'TIMESTAMP');
