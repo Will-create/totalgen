@@ -621,7 +621,6 @@ FCBP.cascade = function() {
 FCBP.addconstraint = function() {
     var constraint = `CONSTRAINT fk_${this.tablebuilder.name}_${this.localcol} `;
     constraint += `FOREIGN KEY (${this.localcol}) REFERENCES ${this.foreigntable}(${this.foreigncol})`;
-    console.log(constraint);
 
     // handle on delete
     if (this.ondeletefn) 

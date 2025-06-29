@@ -231,7 +231,7 @@ NEWMIGRATION({
 };
 MP.log = function(a) {
 
-    console.log(a);
+    t.options.debug && console.log(a);
 }
 MP.migrate = async function() {
     let t = this;
@@ -249,7 +249,6 @@ MP.migrate = async function() {
         t.log('Migrating: ' + migration);
         t.log(Total.migrations);
         let instance = Total.migrations[migration];
-        t.log(instance);
         let builder = new MigrationBuilder(t.db, t.options);
         
         await instance.up(builder);
@@ -389,8 +388,6 @@ MP.status = async function() {
         executed[el.name] = el;
 
     all && all.wait(function(migration, next) {
-        console.log('Migration Status:');
-        console.log('================');
         const status = executed[migration] ? 'MIGRATED' : 'PENDING';
         const info = executed[migration];
         if (info) {
