@@ -300,16 +300,16 @@ TBP.puuid = function(name) {
 };
 
 // Auto-incrementing primary key
-TBP.increments = TBP.increment = function(name) {
+TBP.increments = TBP.increment = function(name, isprimary = false) {
     var t = this;
-    var col = new ColumnBuilder(name || 'id', 'SERIAL PRIMARY KEY');
+    var col = new ColumnBuilder(name || 'id', 'SERIAL {0} KEY'.format(isprimary ? 'PRIMARY' : ''));
     t.columns.push(col);
     return col;
 };
 
-TBP.bigincrements = TBP.bigincrement = function(name) {
+TBP.bigincrements = TBP.bigincrement = function(name, isprimary = false) {
     var t = this;
-    var col = new ColumnBuilder(name || 'id', 'BIGSERIAL PRIMARY KEY');
+    var col = new ColumnBuilder(name || 'id', 'BIGSERIAL {0} KEY'.format(isprimary ? 'PRIMARY' : ''));
     t.columns.push(col);
     return col;
 };
