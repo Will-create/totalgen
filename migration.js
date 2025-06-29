@@ -230,7 +230,7 @@ NEWMIGRATION({
 `;
 };
 MP.log = function(a) {
-
+    let t = this;
     t.options.debug && console.log(a);
 }
 MP.migrate = async function() {
