@@ -119,7 +119,7 @@ var TBP = TableBuilder.prototype;
 
 TBP.id = function(name, isserial = false) {
     var t = this;
-    var col = new ColumnBuilder(name || 'id', isserial ? 'SERIAL' : 'TEXT');
+    var col = new ColumnBuilder(name || 'id', isserial ? 'SERIAL' : 'VARCHAR(255)');
     col.modifiers.push('PRIMARY KEY');
     t.columns.push(col);
     return t;
