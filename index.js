@@ -93,6 +93,7 @@ exports.migration = async function () {
 exports.migrate = async function () {
     const migration = await exports.migration();
     try {
+        await migration.validate();
         await migration.migrate();
     } catch (err) {
         console.error('Error during migration:', err.message);
