@@ -302,18 +302,19 @@ TBP.puuid = function(name) {
 // Auto-incrementing primary key
 TBP.increments = TBP.increment = function(name, isprimary = false) {
     var t = this;
-    var col = new ColumnBuilder(name || 'id', 'SERIAL {0} KEY'.format(isprimary ? 'PRIMARY' : ''));
+    var coltype = isprimary ? 'SERIAL PRIMARY KEY' : 'SERIAL';
+    var col = new ColumnBuilder(name || 'id', coltype);
     t.columns.push(col);
     return col;
 };
 
 TBP.bigincrements = TBP.bigincrement = function(name, isprimary = false) {
     var t = this;
-    var col = new ColumnBuilder(name || 'id', 'BIGSERIAL {0} KEY'.format(isprimary ? 'PRIMARY' : ''));
+    var coltype = isprimary ? 'BIGSERIAL PRIMARY KEY' : 'BIGSERIAL';
+    var col = new ColumnBuilder(name || 'id', coltype);
     t.columns.push(col);
     return col;
 };
-
 TBP.timestamptz = function(name) {
     var t = this;
     var col = new ColumnBuilder(name, 'TIMESTAMPTZ');
