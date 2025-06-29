@@ -300,14 +300,14 @@ TBP.puuid = function(name) {
 };
 
 // Auto-incrementing primary key
-TBP.increments = function(name) {
+TBP.increments = TBP.increment = function(name) {
     var t = this;
     var col = new ColumnBuilder(name || 'id', 'SERIAL PRIMARY KEY');
     t.columns.push(col);
     return col;
 };
 
-TBP.bigincrements = function(name) {
+TBP.bigincrements = TBP.bigincrement = function(name) {
     var t = this;
     var col = new ColumnBuilder(name || 'id', 'BIGSERIAL PRIMARY KEY');
     t.columns.push(col);
