@@ -117,9 +117,9 @@ function TableBuilder(name, schema) {
 var TBP = TableBuilder.prototype;
 
 
-TBP.id = function(name) {
+TBP.id = function(name, isserial = false) {
     var t = this;
-    var col = new ColumnBuilder(name || 'id', 'SERIAL');
+    var col = new ColumnBuilder(name || 'id', isserial ? 'SERIAL' : 'TEXT');
     col.modifiers.push('PRIMARY KEY');
     t.columns.push(col);
     return t;
