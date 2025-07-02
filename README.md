@@ -104,7 +104,7 @@ The output will be enhanced based on your prompt using your preferred AI provide
 
 * [x] CLI Generator: controller, migration, schema, plugin
 * [x] `tgconfig.json` support
-* [ ] AI prompt enhancement (`--prompt`)
+* [x] AI prompt enhancement (`--prompt`)
 * [ ] Route auto-injection
 * [ ] Custom file templates
 
