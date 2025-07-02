@@ -94,6 +94,9 @@ FUNC.generate = function() {
 		case 'plugin':
 			TG.generateplugin(args, prompt);
 			break;
+		case 'console':
+			TG.console();
+			break;
 		default:
 			console.error('Unknown subcommand:', subcmd);
 			break;

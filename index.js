@@ -102,10 +102,10 @@ exports.migrate = async function () {
     }
 };
 
-exports.console = function() {
+exports.console = async function() {
     let config = loadConfig();
     let repl = new Console(config);
-    repl.start();
+    await repl.start();
 };
 exports.rollback = async function () {
     const migration = await exports.migration();
