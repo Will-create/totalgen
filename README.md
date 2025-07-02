@@ -48,7 +48,7 @@ tg migration:rollback        # Run migrations rollback operation to revert
 
 ##  Features
 
-* 🛠️ Generate files for:
+* Generate files for:
 
   * `migration`
   * `controller`
