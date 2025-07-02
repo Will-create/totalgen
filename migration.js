@@ -1,9 +1,9 @@
 const { AIEnhancer } = require('./ai');
 let { AlterTableBuilder, MigrationBuilder, ColumnBuilder, TableBuilder } = require('./migration-builder');
 
-if (!Total.migrations) {
+if (!Total.migrations) 
     Total.migrations = {};
-}
+
 
 global.NEWMIGRATION = function(obj) {
     // simulate error in order to catch the migration file name from the stack trace

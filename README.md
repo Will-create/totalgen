@@ -5,7 +5,7 @@
 
 #  totalgen
 
-> A simple, powerful CLI generator for [Total.js](https://www.totaljs.com), with AI-enhanced output and custom project configuration.
+> A simple, powerful CLI generator for Node.js in general and [Total.js](https://www.totaljs.com) specicially, with AI-enhanced output and custom project configuration.
 
 ---
 
@@ -99,7 +99,7 @@ tg plugin notification --prompt="create a plugin to send email and SMS alerts"
 The output will be enhanced based on your prompt using your preferred AI provider.
 
 ---
-
+  
 ##  Roadmap
 
 * [x] CLI Generator: controller, migration, schema, plugin
