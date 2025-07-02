@@ -40,7 +40,6 @@ function Migration(opt) {
 
 let MP = Migration.prototype;
 
-// Initializing the migrations by creating a migrations table
 MP.init = function() {
     let t = this;
     t.initAI();
@@ -210,7 +209,6 @@ MP.log = function(a) {
     t.options.debug && console.log(a);
 }
 
-// IMPROVED MIGRATE FUNCTION WITH TRANSACTION SUPPORT AND BETTER ERROR HANDLING
 MP.migrate = async function() {
     let t = this;
     
@@ -285,123 +283,117 @@ MP.migrate = async function() {
     }
 }
 
-// IMPROVED ROLLBACK FUNCTION WITH TRANSACTION SUPPORT AND BETTER ERROR HANDLING
 MP.rollback = async function(steps) {
     let t = this;
     
     try {
         if (!steps) steps = 1;
 
-        // Get migrations to rollback
-        let migrationsToRollback = [];
-        
-        for (let i = 0; i < steps; i++) {
+        t.log(`Starting rollback of ${steps} batch(es)`);
+
+        let rolledBackCount = 0;
+
+        // Process each batch step
+        for (let step = 1; step <= steps; step++) {
             let batch = await t.$getlastbatch();
             
             if (!batch) {
-                if (i === 0) {
+                if (step === 1) {
                     t.log('No migrations to rollback');
                     return { success: true, message: 'No migrations to rollback' };
+                } else {
+                    t.log(`No more batches to rollback. Completed ${step - 1} batch(es)`);
+                    break;
                 }
-                break;
             }
 
+            t.log(`Rolling back batch ${batch}`);
+
+            // Get all migrations in this batch (ordered by execution time desc)
             let batchMigrations = await t.$getmigrations(batch);
-            if (batchMigrations && batchMigrations.length > 0) {
-                // Add to rollback list in reverse order (newest first)
-                migrationsToRollback = migrationsToRollback.concat(batchMigrations.reverse());
+            
+            if (!batchMigrations || batchMigrations.length === 0) {
+                t.log(`No migrations found in batch ${batch}`);
+                continue;
             }
-            
-            // Remove this batch from consideration for next iteration
-            await t.$removebatch(batch);
-        }
 
-        if (migrationsToRollback.length === 0) {
-            t.log('No migrations found to rollback');
-            return { success: true, message: 'No migrations found to rollback' };
-        }
+            t.log(`Found ${batchMigrations.length} migration(s) in batch ${batch}`);
 
-        t.log(`Rolling back ${migrationsToRollback.length} migrations`);
-
-        // Process rollbacks sequentially with transaction support
-        for (let i = 0; i < migrationsToRollback.length; i++) {
-            const migration = migrationsToRollback[i];
-            
-            try {
-                t.log(`Rolling back: ${migration}`);
+            // Process each migration in the batch (reverse chronological order)
+            for (let i = 0; i < batchMigrations.length; i++) {
+                const migration = batchMigrations[i];
                 
-                // Check if migration file exists in Total.migrations
-                if (!Total.migrations[migration]) {
-                    t.log(`Warning: Migration ${migration} not found in loaded migrations, skipping rollback`);
-                    await t.remove(migration);
-                    continue;
-                }
-
-                let instance = Total.migrations[migration];
-                
-                // Validate migration has required methods
-                if (typeof instance.down !== 'function') {
-                    t.log(`Warning: Migration ${migration} missing down() method, skipping rollback`);
-                    await t.remove(migration);
-                    continue;
-                }
-
-                let builder = new MigrationBuilder(t.db, t.options);
-                
-                // Execute rollback in transaction if database supports it
-                if (t.options.database === 'postgresql') {
-                    await t.db.query('BEGIN').promise();
-                }
-
                 try {
-                    await instance.down(builder);
-                    await t.remove(migration);
+                    t.log(`Rolling back: ${migration}`);
                     
+                    // Check if migration file exists in Total.migrations
+                    if (!Total.migrations[migration]) {
+                        t.log(`Warning: Migration ${migration} not found in loaded migrations, removing from database`);
+                        await t.remove(migration);
+                        rolledBackCount++;
+                        continue;
+                    }
+
+                    let instance = Total.migrations[migration];
+                    
+                    // Validate migration has required methods
+                    if (typeof instance.down !== 'function') {
+                        t.log(`Warning: Migration ${migration} missing down() method, removing from database`);
+                        await t.remove(migration);
+                        rolledBackCount++;
+                        continue;
+                    }
+
+                    let builder = new MigrationBuilder(t.db, t.options);
+                    
+                    // Execute rollback in transaction if database supports it
                     if (t.options.database === 'postgresql') {
-                        await t.db.query('COMMIT').promise();
+                        await t.db.query('BEGIN').promise();
+                    }
+
+                    try {
+                        // Execute the down migration
+                        await instance.down(builder);
+                        
+                        // Remove migration record from database
+                        await t.remove(migration);
+                        
+                        if (t.options.database === 'postgresql') {
+                            await t.db.query('COMMIT').promise();
+                        }
+                        
+                        t.log(`Successfully rolled back: ${migration}`);
+                        rolledBackCount++;
+                        
+                    } catch (rollbackError) {
+                        if (t.options.database === 'postgresql') {
+                            await t.db.query('ROLLBACK').promise();
+                        }
+                        throw new Error(`Failed to rollback ${migration}: ${rollbackError.message}`);
                     }
                     
-                    t.log(`Rolled back: ${migration}`);
-                } catch (rollbackError) {
-                    if (t.options.database === 'postgresql') {
-                        await t.db.query('ROLLBACK').promise();
-                    }
-                    throw rollbackError;
+                } catch (err) {
+                    t.log(`Error rolling back ${migration}: ${err.message}`);
+                    throw new Error(`Rollback failed at ${migration}: ${err.message}`);
                 }
-                
-            } catch (err) {
-                t.log(`Error rolling back ${migration}: ${err.message}`);
-                throw new Error(`Rollback ${migration} failed: ${err.message}`);
             }
+
+            t.log(`Completed rollback of batch ${batch}`);
         }
 
-        // Restore the batch records that were temporarily removed
-        await t.$restorebatches(migrationsToRollback);
-
-        t.log(`Rollback completed successfully`);
-        return { success: true, message: `Rolled back ${migrationsToRollback.length} migrations` };
+        t.log(`Rollback completed successfully. Rolled back ${rolledBackCount} migration(s)`);
+        return { 
+            success: true, 
+            message: `Successfully rolled back ${rolledBackCount} migration(s) across ${Math.min(steps, rolledBackCount)} batch(es)`,
+            count: rolledBackCount
+        };
 
     } catch (err) {
         t.log(`Rollback failed: ${err.message}`);
         throw err;
     }
-}
-
-// Helper method to temporarily remove batch for iteration
-MP.$removebatch = async function(batch) {
-    let t = this;
-    // This is just for iteration, we'll restore later
-    // In practice, you might want to use a different approach
-    return true;
 };
 
-// Helper method to restore batch records
-MP.$restorebatches = async function(migrations) {
-    let t = this;
-    // Implementation depends on your specific needs
-    // This is a placeholder for restoring batch state if needed
-    return true;
-};
 
 MP.$getpending = async function() {
     let t = this;
@@ -446,13 +438,12 @@ MP.$getmigrations = async function(batch) {
     return new Promise(async function(resolve, reject) {
         try {
             let builder = t.db.find(t.$migrationtable);
-
             if (batch) {
                 builder.where('batch', batch);
             }
-
-            builder.fields('name').sort('dtexecuted DESC'); // Sort by execution time desc
-
+            builder.fields('name');
+            // Sort by execution time descending for proper rollback order
+            builder.sort('dtexecuted', true); // true = descending
             let response = await builder.promise();
             let output = response.map(item => item.name);
             resolve(output);

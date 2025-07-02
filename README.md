@@ -1,10 +1,15 @@
-# ⚡ totalgen
+[![npm version](https://img.shields.io/npm/v/totalgen.svg)](https://www.npmjs.com/package/totalgen)
+[![npm downloads](https://img.shields.io/npm/dm/totalgen.svg)](https://www.npmjs.com/package/totalgen)
+[![license](https://img.shields.io/npm/l/totalgen.svg)](https://www.npmjs.com/package/totalgen)
+
+
+#  totalgen
 
 > A simple, powerful CLI generator for [Total.js](https://www.totaljs.com), with AI-enhanced output and custom project configuration.
 
 ---
 
-## 📦 Installation
+## Installation
 
 ```bash
 npm install -g totalgen
@@ -12,7 +17,7 @@ npm install -g totalgen
 
 ---
 
-## 🚀 Usage
+##  Usage
 
 Run in terminal:
 
@@ -20,7 +25,7 @@ Run in terminal:
 tg <command> <name> [--prompt="enhance with AI"]
 ```
 
-### ✅ Examples
+###  Examples
 
 
 - Template files generation commands
@@ -41,7 +46,7 @@ tg migration:rollback        # Run migrations rollback operation to revert
 
 ---
 
-## ✨ Features
+##  Features
 
 * 🛠️ Generate files for:
 
@@ -49,17 +54,17 @@ tg migration:rollback        # Run migrations rollback operation to revert
   * `controller`
   * `schema`
   * `plugin`
-* 🤖 **AI Integration** with `--prompt`:
+*  **AI Integration** with `--prompt`:
 
   * Enhance generated files using your prompt (e.g. "add validation", "make RESTful", etc.)
-* ⚙️ Configurable via `tgconfig.json`:
+*  Configurable via `tgconfig.json`:
 
   * Set your preferred structure
   * Define AI integration keys and presets
 
 ---
 
-## 📁 Project Config (`tgconfig.json`)
+##  Project Config (`tgconfig.json`)
 
 You can place a `tgconfig.json` at the root of your project:
 
@@ -85,7 +90,7 @@ You can place a `tgconfig.json` at the root of your project:
 ```
 ---
 
-## 🧠 AI Prompting Example
+## AI Prompting Example
 
 ```bash
 tg plugin notification --prompt="create a plugin to send email and SMS alerts"
@@ -95,7 +100,7 @@ The output will be enhanced based on your prompt using your preferred AI provide
 
 ---
 
-## 📌 Roadmap
+##  Roadmap
 
 * [x] CLI Generator: controller, migration, schema, plugin
 * [x] `tgconfig.json` support
@@ -105,20 +110,20 @@ The output will be enhanced based on your prompt using your preferred AI provide
 
 ---
 
-## 👤 Author
+##  Author
 
 Built with precision by **Louis Bertson**
 GitHub: [@louisbertson](https://github.com/will-create)
 
 ---
 
-## 🧪 Contribute
+##  Contribute
 
 Found a bug or want to add a new generator?
 Pull requests welcome. Open an issue or fork it!
 
 ---
 
-## 🪪 License
+##  License
 
 MIT
