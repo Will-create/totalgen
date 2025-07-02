@@ -2,8 +2,7 @@ require('total5');
 const readline = require('readline');
 const util = require('util');
 
-
-function Echo(opt) {
+function Console(opt) {
     let t = this;
     t.options = {};
     t.options.db = t.db = opt.db || DATA || Db();
@@ -22,41 +21,151 @@ function Echo(opt) {
     t.setup();
 }
 
-let EP = Echo.prototype;
-
-EP.setup = function() {
+let CP = Console.prototype;
+CP.setup = function () {
     let t = this;
 
-    // Adding database context
+    // Base context
     t.context.db = t.db;
     t.context.DB = () => t.db;
     t.context.DATA = t.db;
 
-    // Add utility functions
+    // Core Total.js globals
+    t.context.CONF = CONF;
+    t.context.DATA = DATA;
+    t.context.DEBUG = DEBUG;
+    t.context.DEF = DEF;
+    t.context.EMPTYARRAY = EMPTYARRAY;
+    t.context.EMPTYOBJECT = EMPTYOBJECT;
+    t.context.ErrorBuilder = ErrorBuilder;
+    t.context.F = F;
+    t.context.FUNC = FUNC;
+    t.context.Image = Image;
+    t.context.Mail = Mail;
+    t.context.MAIN = MAIN;
+    t.context.MODS = MODS;
+    t.context.NEWMACRO = NEWMACRO;
+    t.context.NOW = NOW;
+    t.context.PATH = PATH;
+    t.context.REPO = REPO;
+    t.context.RESTBuilder = RESTBuilder;
+    t.context.TEMP = TEMP;
+    t.context.Thelpers = Thelpers;
+    t.context.Total = Total;
+    t.context.U = Utils;
+    t.context.Utils = Utils;
+    t.context.Delegates = Delegates;
+
+    // DEF properties
+    t.context.DEF_blacklist = DEF.blacklist;
+    t.context.DEF_currencies = DEF.currencies;
+    t.context.DEF_helpers = DEF.helpers;
+    t.context.DEF_validators = DEF.validators;
+
+    // DEF methods
+    t.context.onAudit = DEF.onAudit;
+
+    // Major core methods
+    t.context.ACTION = ACTION;
+    t.context.API = API;
+    t.context.AUDIT = AUDIT;
+    t.context.AUTH = AUTH;
+    t.context.BACKUP = BACKUP;
+    t.context.BLOCKED = BLOCKED;
+    t.context.CLEANUP = CLEANUP;
+    t.context.clearTimeout2 = clearTimeout2;
+    t.context.CLONE = CLONE;
+    t.context.COMPONENTATOR = COMPONENTATOR;
+    t.context.COPY = COPY;
+    t.context.CORS = CORS;
+    t.context.CRON = CRON;
+    t.context.DECRYPT = DECRYPT;
+    t.context.DECRYPTREQ = DECRYPTREQ;
+    t.context.DIFFARR = DIFFARR;
+    t.context.DOWNLOAD = DOWNLOAD;
+    t.context.EMIT = EMIT;
+    t.context.ENCRYPT = ENCRYPT;
+    t.context.ENCRYPTREQ = ENCRYPTREQ;
+    t.context.ERROR = ERROR;
+    t.context.FILESTORAGE = FILESTORAGE;
+    t.context.GUID = GUID;
+    t.context.HASH = HASH;
+    t.context.HTMLMAIL = HTMLMAIL;
+    t.context.IMPORT = IMPORT;
+    t.context.LDAP = LDAP;
+    t.context.LOAD = LOAD;
+    t.context.LOADCONFIG = LOADCONFIG;
+    t.context.LOADRESOURCE = LOADRESOURCE;
+    t.context.LOCALIZE = LOCALIZE;
+    t.context.LOGMAIL = LOGMAIL;
+    t.context.MAIL = MAIL;
+    t.context.MEMORIZE = MEMORIZE;
+    t.context.MERGE = MERGE;
+    t.context.MIDDLEWARE = MIDDLEWARE;
+    t.context.NEWACTION = NEWACTION;
+    t.context.NEWAPI = NEWAPI;
+    t.context.NEWCALL = NEWCALL;
+    t.context.NEWFORK = NEWFORK;
+    t.context.NEWPUBLISH = NEWPUBLISH;
+    t.context.NEWSCHEMA = NEWSCHEMA;
+    t.context.NEWSUBSCRIBE = NEWSUBSCRIBE;
+    t.context.NEWTHREAD = NEWTHREAD;
+    t.context.NEWTHREADPOOL = NEWTHREADPOOL;
+    t.context.NEWTRANSFORM = NEWTRANSFORM;
+    t.context.NOOP = NOOP;
+    t.context.NOSQL = NOSQL;
+    t.context.NPMINSTALL = NPMINSTALL;
+    t.context.OFF = OFF;
+    t.context.ON = ON;
+    t.context.ONCE = ONCE;
+    t.context.OPENCLIENT = OPENCLIENT;
+    t.context.PAUSESERVER = PAUSESERVER;
+    t.context.print = print;
+    t.context.PROMISIFY = PROMISIFY;
+    t.context.PROXY = PROXY;
+    t.context.PUBLISH = PUBLISH;
+    t.context.QUERIFY = QUERIFY;
+    t.context.REQUEST = REQUEST;
+    t.context.REQUIRE = REQUIRE;
+    t.context.RESTORE = RESTORE;
+    t.context.ROUTE = ROUTE;
+    t.context.setTimeout2 = setTimeout2;
+    t.context.SHELL = SHELL;
+    t.context.SUBSCRIBE = SUBSCRIBE;
+    t.context.SUCCESS = SUCCESS;
+    t.context.TEMPLATE = TEMPLATE;
+    t.context.TMSCLIENT = TMSCLIENT;
+    t.context.TotalAPI = TotalAPI;
+    t.context.TOUCH = TOUCH;
+    t.context.TRANSFORM = TRANSFORM;
+    t.context.TRANSLATE = TRANSLATE;
+    t.context.UID = UID;
+    t.context.UNAUTHORIZED = UNAUTHORIZED;
+    t.context.UNSUBSCRIBE = UNSUBSCRIBE;
+    t.context.WEBSOCKETCLIENT = WEBSOCKETCLIENT;
+
+    // Events (manual handlers example)
+    t.context.ON_exit = ON('exit', (signal) => console.log('Exiting:', signal));
+    t.context.ON_ready = ON('ready', () => console.log('System ready'));
+    t.context.ON_service = ON('service', (counter) => console.log('Service count:', counter));
+    t.context.ON_componentator = ON('componentator', (meta) => console.log('Componentator triggered:', meta));
+    t.context.ON_watcher = ON('watcher', (proc) => console.log('Watcher:', proc));
+
+    // DB helpers
     t.context.tables = async () => await t.gettables();
     t.context.describe = async (table) => await t.describe(table);
     t.context.query = async (sql, params) => await t.query(sql, params);
     t.context.find = (table) => t.db.find(table);
     t.context.insert = (table, data) => t.db.insert(table, data);
-    t.context.update = (table) => t.db.update(table, data);
+    t.context.update = (table, data) => t.db.update(table, data);
     t.context.remove = (table) => t.db.remove(table);
 
-    // Add Utilities
+    // Utilities
     t.context.console = console;
     t.context.util = util;
-    t.context.U = t.context.Utils = Utils;
     t.context.JSON = JSON;
-    t.context.NOW = NOW;
-    t.context.UID = () => UID();
-    t.context.GUID = (length) => GUID(length || 25);
-    t.context.F = t.context.Total = Total;
-    t.context.NEWSCHEMA = (name, fn) => NEWSCHEMA(name, fn);
-    t.context.NEWACTION = (name, opt) => NEWACTION(name, opt);
-    t.context.FUNC = FUNC;
-    t.context.MAIN = MAIN;
-    t.context.ROUTE = (a, b, c, d) => ROUTE(a, b, c, d);
 
-    // Add helper functions
+    // Helpers
     t.context.help = () => t.help();
     t.context.clear = () => t.clear();
     t.context.exit = () => t.exit();
@@ -64,12 +173,13 @@ EP.setup = function() {
 };
 
 
-EP.start = function() {
+
+CP.start = function() {
     let t = this;
 
     t.rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: t.options.prompt, completer: (line) => t.completer(line) });
 
-    t.log('Starting Echo REPL...');
+    t.log('Starting Console REPL...');
     t.log('Type "help()" for available commands or "exit()" to quit');
 
     console.log('');
@@ -101,7 +211,7 @@ EP.start = function() {
 
 
 
-EP.process = async function(input) {
+CP.process = async function(input) {
     let t = this;
 
     try {
@@ -165,7 +275,7 @@ EP.process = async function(input) {
     t.rl.prompt();
 };
 
-EP.special = async function(input) {
+CP.special = async function(input) {
     let t = this;
 
     if (input.startsWith('.tables')) {
@@ -209,7 +319,7 @@ EP.special = async function(input) {
 };
 
 
-EP.eval = async function(code) {
+CP.eval = async function(code) {
     let t = this;
 
     // create a function to evaluate code with context
@@ -244,7 +354,7 @@ EP.eval = async function(code) {
 };
 
 
-EP.gettables = async function() {
+CP.gettables = async function() {
     let t = this;
 
     return new Promise(function(resolve, reject) {
@@ -274,7 +384,7 @@ EP.gettables = async function() {
     });
 };
 
-EP.describe = async function(tablename) {
+CP.describe = async function(tablename) {
     let t = this;
 
     return new Promise(function(resolve, reject) {
@@ -311,7 +421,7 @@ EP.describe = async function(tablename) {
 };
 
 
-EP.query = async function(sql, params) {
+CP.query = async function(sql, params) {
     let t = this;
     return new Promise(function(resolve, reject) {
         let builder = params ? t.db.query(sql, params) : t.db.query(sql);
@@ -326,7 +436,7 @@ EP.query = async function(sql, params) {
 };
 
 
-EP.completer = function(line) {
+CP.completer = function(line) {
     let t = this;
 
     let completions = [
@@ -345,11 +455,11 @@ EP.completer = function(line) {
     return [hits.length ? hits : merge, line];
 }
 
-EP.show = function() {
+CP.show = function() {
     let t = this;
 
     console.log(`
-    === Echo Help ===
+    === Console Help ===
     Database Commands:
   .tables              - List all tables
   .describe <table>    - Describe table structure  
@@ -384,7 +494,7 @@ Examples:
         `);
 };
 
-EP.history = function() {
+CP.history = function() {
     let t = this;
 
     console.log('\n=== Command History ===');
@@ -396,14 +506,14 @@ EP.history = function() {
 };
 
 
-EP.log = function(message) {
+CP.log = function(message) {
     let t = this;
 
-    console.log(`[Echo] ${message}`);
+    console.log(`[Console] ${message}`);
 };
 
 
-EP.exit = function() {
+CP.exit = function() {
     let t = this;
 
     console.log('\nGOOD BYE!');
@@ -414,15 +524,6 @@ EP.exit = function() {
 
     process.exit(0);
 
-}
+};
 
-
-
-
-
-
-let echo = new Echo({ db: DATA, debug: true, prompt: 'Total.js App> ' });
-
-
-echo.start();
-
+exports.Console = Console;

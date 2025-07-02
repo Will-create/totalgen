@@ -1,5 +1,7 @@
 require('total5');
 const {Migration} = require('./migration');
+const {Console} = require('./console');
+
 const CONFIG_FILE = PATH.root('tgconfig.json');
 
 const DEFAULT_CONFIG = {
@@ -98,6 +100,12 @@ exports.migrate = async function () {
     } catch (err) {
         console.error('Error during migration:', err.message);
     }
+};
+
+exports.console = function() {
+    let config = loadConfig();
+    let repl = new Console(config);
+    repl.start();
 };
 exports.rollback = async function () {
     const migration = await exports.migration();
