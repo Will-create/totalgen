@@ -47,6 +47,11 @@ FUNC.help = function() {
 	done();
 };
 
+FUNC.console = function() {
+	TG.console();
+};
+
+
 FUNC.generate = function() {
 	let args = Array.from(arguments).slice(1);
 
@@ -93,9 +98,6 @@ FUNC.generate = function() {
 			break;
 		case 'plugin':
 			TG.generateplugin(args, prompt);
-			break;
-		case 'console':
-			TG.console();
 			break;
 		default:
 			console.error('Unknown subcommand:', subcmd);

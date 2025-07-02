@@ -1,44 +1,72 @@
 require('total5');
-const {Migration} = require('./migration');
-const {Console} = require('./console');
+const { Migration } = require('./migration');
+const { Console } = require('./console');
 
 const CONFIG_FILE = PATH.root('tgconfig.json');
 
 const DEFAULT_CONFIG = {
-	debug: false,
-	location: '/',
-	table: 'migrations'
+    debug: false,
+    location: '/',
+    table: 'migrations'
 };
 
 function loadConfig() {
-    return new Promise(async function(resolve) {
-        
-        Total.Fs.exists(CONFIG_FILE, function(exists) {
+    return new Promise(async function (resolve) {
+        let databaselink;
+        let config;
+
+        Total.Fs.exists(CONFIG_FILE, function (exists) {
             if (!exists) {
                 Total.Fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8');
-                resolve({ ...DEFAULT_CONFIG });
-            } 
+                config = { ...DEFAULT_CONFIG };
+            }
 
 
             try {
                 const raw = Total.Fs.readFileSync(CONFIG_FILE, 'utf8');
                 const userCfg = JSON.parse(raw);
-                resolve({ ...DEFAULT_CONFIG, ...userCfg });
+                config = { ...DEFAULT_CONFIG, ...userCfg };
             } catch (err) {
                 console.error('[tgconfig] Erreur de lecture JSON :', err.message);
-                resolve({ ...DEFAULT_CONFIG });
+                config = { ...DEFAULT_CONFIG };
             }
-        
+
+
+            if (config.db && config.db.link) {
+                databaselink = config.db.link;
+            } else {
+                databaselink = 'postgres://';
+
+                if (config.db.user) {
+                    databaselink += config.db.user;
+                    if (config.db.password) {
+                        databaselink += ':' + config.db.password;
+                    }
+                    databaselink += '@';
+                }
+                if (config.db.host) {
+                    databaselink += config.db.host;
+                }
+                if (config.db.port) {
+                    databaselink += ':' + config.db.port;
+                }
+                if (config.db.database) {
+                    databaselink += '/' + config.db.database;
+                }
+            }
+
+            require('querybuilderpg').init('', databaselink, ERROR('TG Migration'));
+            resolve(config);
         });
     })
 };
 
 // load migrations
 function loadmigrations(config) {
-    return new Promise(async function(resolve) {
+    return new Promise(async function (resolve) {
         const migrationPath = PATH.root(config.location + 'migrations');
         const migrations = [];
-        
+
         if (Total.Fs.existsSync(migrationPath)) {
             const files = Total.Fs.readdirSync(migrationPath);
             files.forEach(file => {
@@ -47,7 +75,7 @@ function loadmigrations(config) {
                 }
             });
         }
-        
+
         resolve(migrations);
     });
 }
@@ -56,37 +84,12 @@ function loadmigrations(config) {
 exports.migration = async function () {
     const config = await loadConfig();
     const migrations = await loadmigrations(config);
-    let databaselink;
 
-    if (config.db && config.db.link) {
-        databaselink = config.db.link;
-    } else {
-        databaselink = 'postgres://';
-
-        if (config.db.user) {
-            databaselink += config.db.user;
-            if (config.db.password) {
-                databaselink += ':' + config.db.password;
-            }
-            databaselink += '@';
-        }
-        if (config.db.host) {
-            databaselink += config.db.host;
-        }
-        if (config.db.port) {
-            databaselink += ':' + config.db.port;
-        }
-        if (config.db.database) {
-            databaselink += '/' + config.db.database;
-        }
-    }
-
-    require('querybuilderpg').init('', databaselink, ERROR('TG Migration'));
-	const migration = new Migration({
-		debug: config.debug,
-		path: config.migrationPath,
-		table: config.tableName
-	});
+    const migration = new Migration({
+        debug: config.debug,
+        path: config.migrationPath,
+        table: config.tableName
+    });
 
     await migration.init();
 
@@ -102,7 +105,7 @@ exports.migrate = async function () {
     }
 };
 
-exports.console = async function() {
+exports.console = async function () {
     let config = loadConfig();
     let repl = new Console(config);
     await repl.start();
@@ -118,7 +121,7 @@ exports.rollback = async function () {
 
 
 exports.createmigration = async function (arg) {
-    let name = arg[0]; 
+    let name = arg[0];
 
     // add support for many names with spaces or commas and run create for each
     if (name && name.includes(',')) {
@@ -142,38 +145,38 @@ exports.createmigration = async function (arg) {
 };
 
 exports.tginit = function () {
-    return new Promise(async function(resolve, reject) {
+    return new Promise(async function (resolve, reject) {
         if (Total.Fs.existsSync(CONFIG_FILE)) {
-        resolve('[tginit] Config file already exists at', CONFIG_FILE);
-    }
-
-    const INIT_CONFIG = {
-        debug: false,
-        location: '/',
-        table: 'migrations',
-        db: {
-            host: 'localhost',
-            port: 5432,
-            user: 'postgres',
-            password: 'postgres',
-            database: 'tgconfig',
-            link: "postgresql://user:password@hostname:5432/database"
-        },
-        ai: {
-            enabled: false,
-            provider: 'openai',
-            baseUrl: 'https://api.openai.com/v1',
-            model: 'gpt-3.5-turbo',
-            apiKey: ''
+            resolve('[tginit] Config file already exists at', CONFIG_FILE);
         }
-    };
 
-    try {
-        Total.Fs.writeFileSync(CONFIG_FILE, JSON.stringify(INIT_CONFIG, null, 2), 'utf8');
-        resolve('[tginit] Config file created successfully at', CONFIG_FILE);
-    } catch (err) {
-        reject('[tginit] Failed to create config file:', err.message);
-    }
+        const INIT_CONFIG = {
+            debug: false,
+            location: '/',
+            table: 'migrations',
+            db: {
+                host: 'localhost',
+                port: 5432,
+                user: 'postgres',
+                password: 'postgres',
+                database: 'tgconfig',
+                link: "postgresql://user:password@hostname:5432/database"
+            },
+            ai: {
+                enabled: false,
+                provider: 'openai',
+                baseUrl: 'https://api.openai.com/v1',
+                model: 'gpt-3.5-turbo',
+                apiKey: ''
+            }
+        };
+
+        try {
+            Total.Fs.writeFileSync(CONFIG_FILE, JSON.stringify(INIT_CONFIG, null, 2), 'utf8');
+            resolve('[tginit] Config file created successfully at', CONFIG_FILE);
+        } catch (err) {
+            reject('[tginit] Failed to create config file:', err.message);
+        }
     });
 };
 

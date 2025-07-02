@@ -54,7 +54,6 @@ CP.setup = function () {
     t.context.Total = Total;
     t.context.U = Utils;
     t.context.Utils = Utils;
-    t.context.Delegates = Delegates;
 
     // DEF properties
     t.context.DEF_blacklist = DEF.blacklist;
@@ -363,7 +362,7 @@ CP.gettables = async function() {
         if (t.options.database == 'postgresql') {
             query = `
                 SELECT table_name FROM information_schema.tables
-                WHERE table_name = '${t.options.schema}'
+                WHERE table_schema = '${t.options.schema}'
                 AND table_type = 'BASE TABLE'
                 ORDER BY table_name;
             `;
@@ -378,7 +377,7 @@ CP.gettables = async function() {
             }
 
             let tables = t.options.database == 'postgresql' ? response.map(row => row.table_name) : response.map(row => Object.values(row)[0]);
-
+            console.log('Tables ===> ', response);
             resolve(tables);
         });
     });
@@ -402,22 +401,56 @@ CP.describe = async function(tablename) {
             FROM information_schema.columns
             WHERE table_schema = '${t.options.schema}'
             AND table_name = '${tablename}'
-            ORDER BY original_position
+            ORDER BY ordinal_position
             `;
         
         } else {
             query = `DESCRIBE ${tablename}`;
         }
 
-        t.db.query(query).callback(function(err, response) {
+        t.db.query(query).callback(async function(err, response) {
             if (err) {
                 reject(new Error(err));
                 return;
             }
 
-            resolve(response);
+            let output = await t.tab_format(response);
+            resolve(output);
         })
     });
+};
+
+CP.tab_format = async function(columns) {
+
+
+    if (!columns || !columns.length) {
+        console.log(`No columns found for "${table}".`);
+        return;
+    }
+
+     let header = ['Column', 'Type', 'Nullable', 'Default', 'Length'];
+    let rows = columns.map(col => [
+        col.column_name,
+        col.data_type,
+        col.is_nullable,
+        col.column_default || '',
+        col.character_maximum_length || ''
+    ]);
+
+    // Include header at top
+    rows.unshift(header);
+
+    // Determine max width per column
+    const colWidths = header.map((_, i) => Math.max(...rows.map(r => String(r[i]).length)));
+
+    let output = '';
+    // Render rows
+    for (let row of rows) {
+        let line = row.map((val, i) => String(val).padEnd(colWidths[i])).join('  ');
+        output += line + '\n';
+    }
+
+    return output;
 };
 
 
@@ -516,10 +549,11 @@ CP.log = function(message) {
 CP.exit = function() {
     let t = this;
 
-    console.log('\nGOOD BYE!');
-
-    if (t.rl) 
+    
+    if (t.rl) {
+        console.log('\nGOOD BYE!');
         t.rl.close();
+    }
     
 
     process.exit(0);
