@@ -274,8 +274,155 @@ EP.gettables = async function() {
     });
 };
 
+EP.describe = async function(tablename) {
+    let t = this;
+
+    return new Promise(function(resolve, reject) {
+        if (!tablename) {
+            reject(new Error('Table name is required'));
+            return;
+        }
+
+
+        let query;
+
+        if (t.options.database == 'postgresql') {
+            query = `
+            SELECT column_name, data_type, is_nullable, column_default, character_maximum_length
+            FROM information_schema.columns
+            WHERE table_schema = '${t.options.schema}'
+            AND table_name = '${tablename}'
+            ORDER BY original_position
+            `;
+        
+        } else {
+            query = `DESCRIBE ${tablename}`;
+        }
+
+        t.db.query(query).callback(function(err, response) {
+            if (err) {
+                reject(new Error(err));
+                return;
+            }
+
+            resolve(response);
+        })
+    });
+};
+
+
+EP.query = async function(sql, params) {
+    let t = this;
+    return new Promise(function(resolve, reject) {
+        let builder = params ? t.db.query(sql, params) : t.db.query(sql);
+        builder.callback(function(err, response) {
+            if (err) {
+                reject(new Error(err));
+                return;
+            }
+            resolve(response);
+        });
+    });
+};
+
+
+EP.completer = function(line) {
+    let t = this;
+
+    let completions = [
+        '.tables', '.describe', '.clear', '.history', '.help', '.exit',
+        'tables()', 'describe(', 'query(', 'find(', 'insert(', 'help()', 'exit()',
+        'db.', 'await ', 'console.log(', 'JSON.stringify(', 'JSON.parse('
+    ];
+
+    // Context completions
+    let keys = Object.keys(t.context);
+
+    let merge = [...completions, ...keys];
+
+    let hits = completions.filter(c => c.startsWith(c));
+
+    return [hits.length ? hits : merge, line];
+}
+
+EP.show = function() {
+    let t = this;
+
+    console.log(`
+    === Echo Help ===
+    Database Commands:
+  .tables              - List all tables
+  .describe <table>    - Describe table structure  
+  .sql <query>         - Execute raw SQL query
+  
+Available Functions:
+  tables()             - Get list of tables
+  describe(table)      - Get table information
+  query(sql, params)   - Execute SQL query
+  find(table)          - Create find query builder
+  insert(table, data)  - Insert data into table
+  
+REPL Commands:
+  .clear               - Clear screen
+  .history             - Show command history
+  .help                - Show this help
+  .exit / .quit        - Exit tinker
+  
+Variables Available:
+  db, DB, DATA         - Database connection
+  console, util, JSON  - Standard utilities
+  NOW, UID()           - Helper functions
+
+Examples:
+  await find('users').promise()
+  await query('SELECT * FROM users LIMIT 5')
+  insert('users', {name: 'John', email: 'john@test.com'})
+  .describe users
+  .sql SELECT COUNT(*) FROM users
+
+==================
+        `);
+};
+
+EP.history = function() {
+    let t = this;
+
+    console.log('\n=== Command History ===');
+    t.options.history.forEach(function(cmd, index) {
+        console.log(`${index + 1}: ${cmd}`);
+    });
+
+    console.log('====================================\n');
+};
+
+
+EP.log = function(message) {
+    let t = this;
+
+    console.log(`[Echo] ${message}`);
+};
+
+
+EP.exit = function() {
+    let t = this;
+
+    console.log('\nGOOD BYE!');
+
+    if (t.rl) 
+        t.rl.close();
+    
+
+    process.exit(0);
+
+}
 
 
 
 
+
+
+let echo = new Echo({ db: DATA, debug: true, prompt: 'Total.js App> ' });
+
+
+echo.start();
 
