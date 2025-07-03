@@ -33,17 +33,22 @@ function loadConfig() {
         Total.Fs.exists(CONFIG_FILE, async function (exists) {
             if (!exists) 
                await Total.Fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8');
-            
+            else {
+                try {
+                        const raw = Total.Fs.readFileSync(CONFIG_FILE, 'utf8');
+                        const userCfg = JSON.parse(raw);
+                        console.log(userCfg);
+                        console.log(config);
 
-
-            try {
-                const raw = Total.Fs.readFileSync(CONFIG_FILE, 'utf8');
-                const userCfg = JSON.parse(raw);
-                config = userCfg;
-            } catch (err) {
-                console.error('[tgconfig] Erreur de lecture JSON :', err.message);
-                config = { ...DEFAULT_CONFIG };
+                        config = userCfg;
+                    } catch (err) {
+                        console.error('[tgconfig] Erreur de lecture JSON :', err.message);
+                        config = { ...DEFAULT_CONFIG };
+                    }
             }
+
+
+          
 
             if (config.db && config.db.link) {
                 databaselink = config.db.link;
