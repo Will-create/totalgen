@@ -31,43 +31,46 @@ function loadConfig() {
         let config = DEFAULT_CONFIG;
 
         Total.Fs.exists(CONFIG_FILE, async function (exists) {
-            if (!exists) 
-               await Total.Fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8');
+            if (!exists)
+                await Total.Fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8');
             else {
                 try {
-                        const raw = Total.Fs.readFileSync(CONFIG_FILE, 'utf8');
-                        const userCfg = JSON.parse(raw);  
-                        config = userCfg;
-                    } catch (err) {
-                        console.error('[tgconfig] Erreur de lecture JSON :', err.message);
-                        config = { ...DEFAULT_CONFIG };
-                    }
+                    const raw = Total.Fs.readFileSync(CONFIG_FILE, 'utf8');
+                    const userCfg = JSON.parse(raw);
+                    config = userCfg;
+                } catch (err) {
+                    console.error('[tgconfig] Erreur de lecture JSON :', err.message);
+                    config = { ...DEFAULT_CONFIG };
+                }
             }
 
 
-          
+
 
             if (config.db && config.db.link) {
                 databaselink = config.db.link;
             } else {
                 databaselink = 'postgres://';
 
-                if (config.db.user) {
-                    databaselink += config.db.user;
-                    if (config.db.password) {
-                        databaselink += ':' + config.db.password;
+                if (config.db) {
+                    if (config.db.user) {
+                        databaselink += config.db.user;
+                        if (config.db.password) {
+                            databaselink += ':' + config.db.password;
+                        }
+                        databaselink += '@';
                     }
-                    databaselink += '@';
+                    if (config.db.host) {
+                        databaselink += config.db.host;
+                    }
+                    if (config.db.port) {
+                        databaselink += ':' + config.db.port;
+                    }
+                    if (config.db.database) {
+                        databaselink += '/' + config.db.database;
+                    }
                 }
-                if (config.db.host) {
-                    databaselink += config.db.host;
-                }
-                if (config.db.port) {
-                    databaselink += ':' + config.db.port;
-                }
-                if (config.db.database) {
-                    databaselink += '/' + config.db.database;
-                }
+
             }
 
             require('querybuilderpg').init('', databaselink, ERROR('TG Migration'));
