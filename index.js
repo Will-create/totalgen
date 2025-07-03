@@ -36,10 +36,7 @@ function loadConfig() {
             else {
                 try {
                         const raw = Total.Fs.readFileSync(CONFIG_FILE, 'utf8');
-                        const userCfg = JSON.parse(raw);
-                        console.log(userCfg);
-                        console.log(config);
-
+                        const userCfg = JSON.parse(raw);  
                         config = userCfg;
                     } catch (err) {
                         console.error('[tgconfig] Erreur de lecture JSON :', err.message);
