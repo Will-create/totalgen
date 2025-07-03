@@ -140,7 +140,6 @@ exports.rollback = async function () {
 
 exports.createmigration = async function (arg) {
     let name = arg[0];
-
     // add support for many names with spaces or commas and run create for each
     if (name && name.includes(',')) {
         const names = name.split(',').map(n => n.trim());
