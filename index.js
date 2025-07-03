@@ -7,25 +7,39 @@ const CONFIG_FILE = PATH.root('tgconfig.json');
 const DEFAULT_CONFIG = {
     debug: false,
     location: '/',
-    table: 'migrations'
+    table: 'migrations',
+    db: {
+        host: 'localhost',
+        port: 5432,
+        user: 'postgres',
+        password: 'postgres',
+        database: 'tgconfig',
+        link: "postgresql://user:password@hostname:5432/database"
+    },
+    ai: {
+        enabled: false,
+        provider: 'openai',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'gpt-3.5-turbo',
+        apiKey: ''
+    }
 };
 
 function loadConfig() {
     return new Promise(async function (resolve) {
         let databaselink;
-        let config;
+        let config = DEFAULT_CONFIG;
 
-        Total.Fs.exists(CONFIG_FILE, function (exists) {
-            if (!exists) {
-                Total.Fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8');
-                config = { ...DEFAULT_CONFIG };
-            }
+        Total.Fs.exists(CONFIG_FILE, async function (exists) {
+            if (!exists) 
+               await Total.Fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8');
+            
 
 
             try {
                 const raw = Total.Fs.readFileSync(CONFIG_FILE, 'utf8');
                 const userCfg = JSON.parse(raw);
-                config = { ...DEFAULT_CONFIG, ...userCfg };
+                config = userCfg;
             } catch (err) {
                 console.error('[tgconfig] Erreur de lecture JSON :', err.message);
                 config = { ...DEFAULT_CONFIG };
