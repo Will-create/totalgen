@@ -45,7 +45,6 @@ function loadConfig() {
                 config = { ...DEFAULT_CONFIG };
             }
 
-
             if (config.db && config.db.link) {
                 databaselink = config.db.link;
             } else {
