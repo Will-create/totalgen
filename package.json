@@ -1,6 +1,6 @@
 {
    "name": "totalgen",
-   "version": "1.4.0",
+   "version": "1.4.1",
    "description": "Total.js CLI tool inspired by Artisan — generate migrations, controllers, schemas, etc.",
    "main": "index.js",
    "scripts": {
