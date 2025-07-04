@@ -144,7 +144,10 @@ exports.createmigration = async function (arg) {
     if (name && name.includes(',')) {
         const names = name.split(',').map(n => n.trim());
         for (const n of names) {
-            await exports.createmigration([n]);
+            let timeout = setTimeout(async() => {
+                clearTimeout(timeout);
+                await exports.createmigration([n]);
+            }, 500);
         }
         return;
     }
