@@ -122,7 +122,6 @@ FUNC.migrate = async function() {
 	await TG.migrate();
 };
 
-
 FUNC.migration = async function() {
 	let args = Array.from(arguments).slice(1);
 	// handle sub help
@@ -154,6 +153,11 @@ FUNC.migration = async function() {
 	}
 
 }
+
+FUNC.test = function() {
+	require('../test.js');
+	done();
+};
 
 FUNC.rollback
 
