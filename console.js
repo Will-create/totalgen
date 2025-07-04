@@ -244,6 +244,18 @@ CP.process = async function (input) {
 			return;
 		}
 
+        if (input.startsWith('.')) {
+			t.options.multiline = false;
+			t.mbuffer = '';
+			t.rl.setPrompt(t.options.prompt);
+
+			// Execute immediately
+			if (await t.special(input)) {
+				t.rl.prompt();
+				return;
+			}
+		}
+
 		// Multiline active: accumulate buffer
 		if (t.options.multiline) {
 			t.mbuffer += input + '\n';
