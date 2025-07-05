@@ -155,7 +155,7 @@ exports.createmigration = async function (arg, type, prompt) {
     try {
         await migration.create(name, type, prompt);
     } catch (err) {
-        console.error('Erreur lors de la création de la migration :', err.message);
+        console.error('Erreur lors de la création de la migration :', err);
     }
 };
 

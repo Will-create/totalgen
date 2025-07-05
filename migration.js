@@ -23,7 +23,7 @@ global.NEWMIGRATION = function(obj) {
 function Migration(opt) {
     var t = this;
     t.options = {};
-    t.options.path = opt.location ? PATH.root(opt.location) : PATH.root('migrations');
+    t.options.path = opt.location ? PATH.root(opt.location + '/migrations') : PATH.root('migrations');
     t.options.schema = opt.schema || 'public';
     t.options.table = opt.table || 'migrations';
     t.options.db = t.db = DATA || DB();
@@ -89,7 +89,8 @@ MP.create = async function(name, type, prompt) {
             if (prompt && t.aiconf && t.aiconf.enabled) {
                 t.options.debug && t.log('Enhancing template with AI');
                 const enhancer = new AIEnhancer(t.aiconf);
-                template = await enhancer.enhance(template, prompt, type, name);
+                enhancer.init();
+                template = await enhancer.enhance(template, prompt, 'migration');
                 t.options.debug && t.log('Template is enhanced successfully');
             }
 
