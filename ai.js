@@ -2,8 +2,8 @@ require("total5");
 function AI(config) {
     this.config = config;
     this.provider = config.provider || 'openai';
-    this.apikey = config.apikey;
-    this.baseurl = config.baseurl || 'https://api.openai.com/v1';
+    this.apikey = config.apiKey;
+    this.baseurl = config.baseUrl || 'https://api.openai.com/v1';
     this.model = config.model || 'gpt-3.5-turbo';
     this.temp = config.temperature || 0.7;
     this.maxtokens = config.maxtokens;
@@ -81,18 +81,16 @@ AIP.getsysprompt = async function(agent, type) {
 };
 
 AIP.callLLM = async function (sysprompt, userprompt) {
-   return new Promise(async function(resolve, reject) {
     let t = this;
+   return new Promise(async function(resolve, reject) {
     let payload = {};
     payload.model = t.model;
     payload.messages = [{ role: 'system', content: sysprompt }, { role: 'user', content: userprompt }];
     
     payload.max_tokens = t.maxtokens;
     payload.temperature = t.temp;
-
-    let response = await RESTBuilder.POST(t.baseurl, payload).header('Authorization', 'Bearer ' + t.apikey).timeout(t.timeout).keepalive().promise();
-
-    if (!responses.choices) {
+    let response = await RESTBuilder.POST(t.baseurl + '/chat/completions', payload).header('Authorization', 'Bearer ' + t.apikey).timeout(t.timeout).keepalive().callback(console.log);
+    if (!response || !response.choices) {
         reject(new Error('No content AI response'));
         return;
     }

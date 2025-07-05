@@ -88,7 +88,7 @@ MP.create = async function(name, type, prompt) {
             // AI enhancement if prompt is provided and ai enabled
             if (prompt && t.aiconf && t.aiconf.enabled) {
                 t.options.debug && t.log('Enhancing template with AI');
-                const enhancer = new AIEnhancer(t.options);
+                const enhancer = new AIEnhancer(t.aiconf);
                 template = await enhancer.enhance(template, prompt, type, name);
                 t.options.debug && t.log('Template is enhanced successfully');
             }
