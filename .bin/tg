@@ -47,7 +47,7 @@ FUNC.help = function() {
 	done();
 };
 
-FUNC.console = function() {
+FUNC.console = async function() {
 	TG.console();
 };
 
@@ -86,12 +86,18 @@ FUNC.generate = function() {
 		return done();
 	}
 
+	
 	switch (subcmd) {
 		case 'controller':
-			TG.generatecontroller(args, prompt);
+			TG.generatecontroller(args);
 			break;
-		case 'migration':
-			TG.createmigration(args, prompt);
+			case 'migration':
+				let migrationtype = 'table';
+				if (args.includes('-t')) {
+					let index = args.indexOf('-t');
+					migrationtype = args[index + 1];
+				}
+				TG.createmigration(args, migrationtype, prompt);
 			break;
 		case 'schema':
 			TG.generateschema(args, prompt);

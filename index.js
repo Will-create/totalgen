@@ -101,13 +101,9 @@ function loadmigrations(config) {
 
 exports.migration = async function () {
     const config = await loadConfig();
-    const migrations = await loadmigrations(config);
+    await loadmigrations(config);
 
-    const migration = new Migration({
-        debug: config.debug,
-        path: config.migrationPath,
-        table: config.tableName
-    });
+    const migration = new Migration(config);
 
     await migration.init();
 
@@ -138,7 +134,7 @@ exports.rollback = async function () {
 };
 
 
-exports.createmigration = async function (arg) {
+exports.createmigration = async function (arg, type, prompt) {
     let name = arg[0];
     // add support for many names with spaces or commas and run create for each
     if (name && name.includes(',')) {
@@ -146,19 +142,18 @@ exports.createmigration = async function (arg) {
         for (const n of names) {
             let timeout = setTimeout(async() => {
                 clearTimeout(timeout);
-                await exports.createmigration([n]);
+                await exports.createmigration([n], type, prompt);
             }, 500);
         }
         return;
     }
-
     const migration = await exports.migration();
     if (!name) {
         console.error('Plese provide a name for you migration.');
         return;
     }
     try {
-        await migration.create(name);
+        await migration.create(name, type, prompt);
     } catch (err) {
         console.error('Erreur lors de la création de la migration :', err.message);
     }

@@ -5,22 +5,23 @@ const vm = require('vm');
 let lastSigint = 0;
 
 function isInputComplete(code) {
-	try {
-		new vm.Script(code);
-		return true;
-	} catch (err) {
-		// Incomplete if script throws known parsing errors
-		const msg = err.message;
-		return !(
-			err instanceof SyntaxError &&
-			/(Unexpected end of input|missing\)|missing\}|Unexpected token|\bexpected\b)/i.test(msg)
-		);
-	}
+    try {
+        new vm.Script(code);
+        return true;
+    } catch (err) {
+        // Incomplete if script throws known parsing errors
+        const msg = err.message;
+        return !(
+            err instanceof SyntaxError &&
+            /(Unexpected end of input|missing\)|missing\}|Unexpected token|\bexpected\b)/i.test(msg)
+        );
+    }
 }
 
 
 function Console(opt) {
     let t = this;
+    t.conf = opt;
     t.options = {};
     t.options.db = t.db = opt.db || DATA || DB();
     t.options.schema = opt.schema || 'public';
@@ -191,122 +192,161 @@ CP.setup = function () {
     t.context.JSON = JSON;
 
     // Helpers
-    t.context.help = () => t.help();
-    t.context.clear = () => t.clear();
-    t.context.exit = () => t.exit();
-    t.context.history = () => t.history();
+    t.context.help = t.help;
+    t.context.clear = t.clear;
+    t.context.exit = t.exit;
+    t.context.history = t.history;
+};
+CP.logo = function () {
+    console.clear();
+console.log(`
+
+ _____     _        _    _             ____  
+|_   _|__ | |_ __ _| |  (_)___  __   _| ___| 
+  | |/ _ \\| __/ _\` | |  | / __| \\ \\ / /___ \\ 
+  | | (_) | || (_| | |_ | \\__ \\  \\ V / ___) |
+  |_|\\___/ \\__\\__,_|_(_)/ |___/   \\_/ |____/ 
+                      |__/                  
+=============[Make Total.js Great Again!]=========
+`);
+}
+CP.config = function () {
+    let t = this;
+    console.log(t.conf);  
 };
 
 CP.start = function () {
-	let t = this;
+    let t = this;
 
-	t.rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout,
-		prompt: t.options.prompt,
-		completer: (line) => t.completer(line),
-	});
+    t.rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        prompt: t.options.prompt,
+        completer: (line) => t.completer(line),
+    });
 
-	t.log('Starting Console REPL...');
-	t.log('Type "help()" for available commands or "exit()" to quit\n');
+    t.logo();
+    t.log('Starting Console REPL...');
+    t.log('Type "help()" for available commands or "exit()" to quit\n');
 
-	t.rl.prompt();
+    t.rl.prompt();
 
-	t.rl.on('line', async (input) => {
-		await t.process(input.trim());
-	});
+    t.rl.on('line', async (input) => {
+        await t.process(input.trim());
+    });
 
-	t.rl.on('close', () => {
-		t.exit();
-	});
+    t.rl.on('close', () => {
+        t.exit();
+    });
+    t.rl.on('SIGINT', () => {
+        const now = Date.now();
 
-	t.rl.on('SIGINT', () => {
-		if (t.options.multiline) {
-			t.options.multiline = false;
-			t.mbuffer = '';
-			console.log('\nMultiline input cancelled');
-			t.rl.setPrompt(t.options.prompt);
-		} else {
-			console.log('\nPress Ctrl+C again to exit or type exit()');
-		}
+        if (t.options.multiline) {
+            t.options.multiline = false;
+            t.mbuffer = '';
+            console.log('\nMultiline input cancelled');
+            t.rl.setPrompt(t.options.prompt);
+            t.rl.prompt();
+            return;
+        }
 
-		t.rl.prompt();
-	});
+        if (now - lastSigint < 2000) {
+            // Second Ctrl+C within 2 seconds: exit immediately
+            t.exit();
+            return;
+        }
+
+        lastSigint = now;
+        console.log('\nPress Ctrl+C again within 2 seconds to exit or type exit()');
+        t.rl.prompt();
+    });
+
 };
 
 
 CP.process = async function (input) {
-	let t = this;
+    let t = this;
 
-	try {
-		if (!input && !t.options.multiline) {
-			t.rl.prompt();
-			return;
-		}
+    try {
+        if (!input && !t.options.multiline) {
+            t.rl.prompt();
+            return;
+        }
 
+        // Immediate execute for dot commands — no multiline or buffering
         if (input.startsWith('.')) {
-			t.options.multiline = false;
-			t.mbuffer = '';
-			t.rl.setPrompt(t.options.prompt);
+            t.options.multiline = false;
+            t.mbuffer = '';
+            t.rl.setPrompt(t.options.prompt);
 
-			// Execute immediately
-			if (await t.special(input)) {
-				t.rl.prompt();
-				return;
-			}
-		}
+            if (await t.special(input)) {
+                t.rl.prompt();
+                return;
+            } else {
+                console.log('Unknown command:', input);
+                t.rl.prompt();
+                return;
+            }
+        }
 
-		// Multiline active: accumulate buffer
-		if (t.options.multiline) {
-			t.mbuffer += input + '\n';
+        // Multiline active: accumulate buffer
+        if (t.options.multiline) {
+            t.mbuffer += input + '\n';
 
-			if (isInputComplete(t.mbuffer)) {
-				input = t.mbuffer.trim();
-				t.options.multiline = false;
-				t.mbuffer = '';
-				t.rl.setPrompt(t.options.prompt);
-			} else {
-				t.rl.setPrompt(`... (${t.mbuffer.split('\n').length}) `);
-				t.rl.prompt();
-				return;
-			}
-		} else if (!isInputComplete(input)) {
-			// Start multiline
-			t.options.multiline = true;
-			t.mbuffer = input + '\n';
-			t.rl.setPrompt('... (1) ');
-			t.rl.prompt();
-			return;
-		}
+            if (isInputComplete(t.mbuffer)) {
+                input = t.mbuffer.trim();
+                t.options.multiline = false;
+                t.mbuffer = '';
+                t.rl.setPrompt(t.options.prompt);
+            } else {
+                t.rl.setPrompt(`... (${t.mbuffer.split('\n').length}) `);
+                t.rl.prompt();
+                return;
+            }
+        } else if (!isInputComplete(input)) {
+            // Start multiline for non-dot commands only
+            t.options.multiline = true;
+            t.mbuffer = input + '\n';
+            t.rl.setPrompt('... (1) ');
+            t.rl.prompt();
+            return;
+        }
 
-		// Track history
-		if (input && input !== t.options.history[t.options.history.length - 1])
-			t.options.history.push(input);
-		t.options.hindex = -1;
+        // Track history
+        if (input && input !== t.options.history[t.options.history.length - 1])
+            t.options.history.push(input);
+        t.options.hindex = -1;
 
-		// Execute .commands
-		if (await t.special(input)) {
-			t.rl.prompt();
-			return;
-		}
+        // Evaluate user input
+        let result = await t.eval(input);
+        if (result !== undefined)
+            console.log(util.inspect(result, { depth: 3, colors: true, maxArrayLength: 50 }));
 
-		// Evaluate user input
-		let result = await t.eval(input);
-		if (result !== undefined)
-			console.log(util.inspect(result, { depth: 3, colors: true, maxArrayLength: 50 }));
+    } catch (e) {
+        console.log('Error:', e.message);
+        t.options.debug && console.error(e.stack);
+    }
 
-	} catch (e) {
-		console.log('Error:', e.message);
-		t.options.debug && console.error(e.stack);
-	}
-
-	t.rl.setPrompt(t.options.prompt);
-	t.rl.prompt();
+    t.rl.setPrompt(t.options.prompt);
+    t.rl.prompt();
 };
 
 
-CP.special = async function(input) {
+
+CP.special = async function (input) {
     let t = this;
+
+    if (input === '.help' || input === '.show') {
+        t.show(); // your method that prints help menu
+        return true;
+    }
+
+    if (input === '.config' || input === '.conf') {
+        t.config();
+        return true;
+    }
+    
+
 
     if (input.startsWith('.tables')) {
         let tables = await t.tables();
@@ -395,37 +435,37 @@ CP.special = async function(input) {
     return false;
 };
 CP.eval = async function (code) {
-	let t = this;
+    let t = this;
 
-	try {
-		const script = new vm.Script(code, { displayErrors: true });
+    try {
+        const script = new vm.Script(code, { displayErrors: true });
 
-		// Run in the shared context
-		let result = script.runInContext(vm.createContext(t.context));
+        // Run in the shared context
+        let result = script.runInContext(vm.createContext(t.context));
 
-		if (result && typeof result.then === 'function')
-			result = await result;
+        if (result && typeof result.then === 'function')
+            result = await result;
 
-		return result;
-	} catch (err) {
-		// Attempt async wrapper fallback
-		try {
-			const wrapped = new vm.Script(`(async () => { return ${code} })()`, { displayErrors: true });
-			let result = wrapped.runInContext(vm.createContext(t.context));
-			if (result && typeof result.then === 'function')
-				result = await result;
-			return result;
-		} catch (finalErr) {
-			throw finalErr;
-		}
-	}
+        return result;
+    } catch (err) {
+        // Attempt async wrapper fallback
+        try {
+            const wrapped = new vm.Script(`(async () => { return ${code} })()`, { displayErrors: true });
+            let result = wrapped.runInContext(vm.createContext(t.context));
+            if (result && typeof result.then === 'function')
+                result = await result;
+            return result;
+        } catch (finalErr) {
+            throw finalErr;
+        }
+    }
 };
 // Database methods from db.js integrated into Console
-CP.tables = async function() {
+CP.tables = async function () {
     let t = this;
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
         let query;
-        
+
         if (t.options.database === 'postgresql') {
             query = `
                 SELECT table_name 
@@ -438,36 +478,36 @@ CP.tables = async function() {
             query = `SHOW TABLES`;
         }
 
-        t.db.query(query).callback(function(err, response) {
+        t.db.query(query).callback(function (err, response) {
             if (err) {
                 t.log('Error fetching tables: ' + err.message);
                 reject(new Error(err));
                 return;
             }
-            
+
             let tables = [];
             if (t.options.database === 'postgresql') {
                 tables = response.map(row => row.table_name);
             } else {
                 tables = response.map(row => Object.values(row)[0]);
             }
-            
+
             t.options.debug && t.log(`Found ${tables.length} tables`);
             resolve(tables);
         });
     });
 };
 
-CP.columns = async function(tableName) {
+CP.columns = async function (tableName) {
     let t = this;
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
         if (!tableName) {
             reject(new Error('Table name is required'));
             return;
         }
 
         let query;
-        
+
         if (t.options.database === 'postgresql') {
             query = `
                 SELECT 
@@ -487,29 +527,29 @@ CP.columns = async function(tableName) {
             query = `DESCRIBE ${tableName}`;
         }
 
-        t.db.query(query).callback(function(err, response) {
+        t.db.query(query).callback(function (err, response) {
             if (err) {
                 t.log(`Error fetching columns for ${tableName}: ` + err.message);
                 reject(new Error(err));
                 return;
             }
-            
+
             t.options.debug && t.log(`Found ${response.length} columns in ${tableName}`);
             resolve(response);
         });
     });
 };
 
-CP.indexes = async function(tableName) {
+CP.indexes = async function (tableName) {
     let t = this;
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
         if (!tableName) {
             reject(new Error('Table name is required'));
             return;
         }
 
         let query;
-        
+
         if (t.options.database === 'postgresql') {
             query = `
                 SELECT 
@@ -529,29 +569,29 @@ CP.indexes = async function(tableName) {
             query = `SHOW INDEX FROM ${tableName}`;
         }
 
-        t.db.query(query).callback(function(err, response) {
+        t.db.query(query).callback(function (err, response) {
             if (err) {
                 t.log(`Error fetching indexes for ${tableName}: ` + err.message);
                 reject(new Error(err));
                 return;
             }
-            
+
             t.options.debug && t.log(`Found ${response.length} indexes in ${tableName}`);
             resolve(response);
         });
     });
 };
 
-CP.constraints = async function(tableName) {
+CP.constraints = async function (tableName) {
     let t = this;
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
         if (!tableName) {
             reject(new Error('Table name is required'));
             return;
         }
 
         let query;
-        
+
         if (t.options.database === 'postgresql') {
             query = `
                 SELECT 
@@ -585,22 +625,22 @@ CP.constraints = async function(tableName) {
             `;
         }
 
-        t.db.query(query).callback(function(err, response) {
+        t.db.query(query).callback(function (err, response) {
             if (err) {
                 t.log(`Error fetching constraints for ${tableName}: ` + err.message);
                 reject(new Error(err));
                 return;
             }
-            
+
             t.options.debug && t.log(`Found ${response.length} constraints in ${tableName}`);
             resolve(response);
         });
     });
 };
 
-CP.describe = async function(tableName) {
+CP.describe = async function (tableName) {
     let t = this;
-    
+
     try {
         if (!tableName) {
             throw new Error('Table name is required');
@@ -630,16 +670,16 @@ CP.describe = async function(tableName) {
     }
 };
 
-CP.exists = async function(tableName) {
+CP.exists = async function (tableName) {
     let t = this;
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
         if (!tableName) {
             reject(new Error('Table name is required'));
             return;
         }
 
         let query;
-        
+
         if (t.options.database === 'postgresql') {
             query = `
                 SELECT EXISTS (
@@ -656,33 +696,33 @@ CP.exists = async function(tableName) {
             `;
         }
 
-        t.db.query(query).callback(function(err, response) {
+        t.db.query(query).callback(function (err, response) {
             if (err) {
                 t.log(`Error checking if table ${tableName} exists: ` + err.message);
                 reject(new Error(err));
                 return;
             }
-            
-            let exists = t.options.database === 'postgresql' ? 
-                response[0].exists : 
+
+            let exists = t.options.database === 'postgresql' ?
+                response[0].exists :
                 response[0].count > 0;
-                
+
             t.options.debug && t.log(`Table ${tableName} exists: ${exists}`);
             resolve(exists);
         });
     });
 };
 
-CP.size = async function(tableName) {
+CP.size = async function (tableName) {
     let t = this;
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
         if (!tableName) {
             reject(new Error('Table name is required'));
             return;
         }
 
         let query;
-        
+
         if (t.options.database === 'postgresql') {
             query = `
                 SELECT 
@@ -701,81 +741,81 @@ CP.size = async function(tableName) {
             `;
         }
 
-        t.db.query(query).callback(function(err, response) {
+        t.db.query(query).callback(function (err, response) {
             if (err) {
                 t.log(`Error getting size for ${tableName}: ` + err.message);
                 reject(new Error(err));
                 return;
             }
-            
+
             t.options.debug && t.log(`Retrieved size information for ${tableName}`);
             resolve(response[0]);
         });
     });
 };
 
-CP.truncate = async function(tableName) {
+CP.truncate = async function (tableName) {
     let t = this;
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
         if (!tableName) {
             reject(new Error('Table name is required'));
             return;
         }
 
         let query = `TRUNCATE TABLE ${tableName}`;
-        
+
         if (t.options.database === 'postgresql') {
             query += ' RESTART IDENTITY CASCADE';
         }
 
-        t.db.query(query).callback(function(err, response) {
+        t.db.query(query).callback(function (err, response) {
             if (err) {
                 t.log(`Error truncating table ${tableName}: ` + err.message);
                 reject(new Error(err));
                 return;
             }
-            
+
             t.options.debug && t.log(`Table ${tableName} truncated successfully`);
             resolve(response);
         });
     });
 };
 
-CP.drop = async function(tableName) {
+CP.drop = async function (tableName) {
     let t = this;
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
         if (!tableName) {
             reject(new Error('Table name is required'));
             return;
         }
 
         let query = `DROP TABLE IF EXISTS ${tableName}`;
-        
+
         if (t.options.database === 'postgresql') {
             query += ' CASCADE';
         }
 
-        t.db.query(query).callback(function(err, response) {
+        t.db.query(query).callback(function (err, response) {
             if (err) {
                 t.log(`Error dropping table ${tableName}: ` + err.message);
                 reject(new Error(err));
                 return;
             }
-            
+
             t.options.debug && t.log(`Table ${tableName} dropped successfully`);
             resolve(response);
         });
     });
 };
 
-CP.seed = async function(tableName, data) {
+CP.seed = async function (tableName, data) {
     let t = this;
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
         if (!tableName) {
             reject(new Error('Table name is required'));
             return;
         }
-        
+
         if (!data || !Array.isArray(data) || data.length === 0) {
             reject(new Error('Data must be a non-empty array'));
             return;
@@ -784,7 +824,7 @@ CP.seed = async function(tableName, data) {
         try {
             let insertPromises = data.map(record => {
                 return new Promise((res, rej) => {
-                    t.db.insert(tableName, record).callback(function(err) {
+                    t.db.insert(tableName, record).callback(function (err) {
                         if (err) {
                             rej(err);
                         } else {
@@ -806,12 +846,12 @@ CP.seed = async function(tableName, data) {
     });
 };
 
-CP.gettables = async function() {
+CP.gettables = async function () {
     let t = this;
     return await t.tables();
 };
 
-CP.tab_format = async function(columns) {
+CP.tab_format = async function (columns) {
     if (!columns || !columns.length) {
         console.log('No columns found.');
         return;
@@ -839,9 +879,9 @@ CP.tab_format = async function(columns) {
     return output;
 };
 
-CP.query = async function(sql, params) {
+CP.query = async function (sql, params) {
     let t = this;
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
         if (!sql) {
             reject(new Error('SQL query is required'));
             return;
@@ -850,54 +890,54 @@ CP.query = async function(sql, params) {
         t.options.debug && t.log(`Executing query: ${sql}`);
 
         let query = params ? t.db.query(sql, params) : t.db.query(sql);
-        
-        query.callback(function(err, response) {
+
+        query.callback(function (err, response) {
             if (err) {
                 t.log(`Error executing query: ` + err.message);
                 reject(new Error(err));
                 return;
             }
-            
+
             t.options.debug && t.log(`Query executed successfully`);
             resolve(response);
         });
     });
 };
 CP.completer = function (line) {
-	let t = this;
+    let t = this;
 
-	const commands = [
-		// REPL commands
-		'.tables', '.describe', '.columns', '.indexes', '.constraints',
-		'.exists', '.size', '.truncate', '.drop',
-		'.clear', '.history', '.help', '.show', '.exit', '.quit',
-		'.sql',
+    const commands = [
+        // REPL commands
+        '.tables', '.describe', '.columns', '.indexes', '.constraints',
+        '.exists', '.size', '.truncate', '.drop',
+        '.clear', '.history', '.help', '.show', '.exit', '.quit',
+        '.sql',
 
-		// DB methods
-		'tables()', 'columns(', 'indexes(', 'constraints(',
-		'describe(', 'exists(', 'size(', 'truncate(', 'drop(',
-		'seed(', 'query(', 'find(', 'insert(', 'update(', 'remove(',
+        // DB methods
+        'tables()', 'columns(', 'indexes(', 'constraints(',
+        'describe(', 'exists(', 'size(', 'truncate(', 'drop(',
+        'seed(', 'query(', 'find(', 'insert(', 'update(', 'remove(',
 
-		// Utils
-		'console.log(', 'JSON.stringify(', 'JSON.parse(', 'await ', 'UID()', 'NOW',
+        // Utils
+        'console.log(', 'JSON.stringify(', 'JSON.parse(', 'await ', 'UID()', 'NOW',
 
-		// Total.js primitives
-		'ACTION(', 'FUNC(', 'ROUTE(', 'AUTH(', 'NEWSCHEMA(', 'NEWACTION(', 'MEMORIZE(', 'CALL(', 'DATA', 'DEF.', 'CONF',
-	];
+        // Total.js primitives
+        'ACTION(', 'FUNC(', 'ROUTE(', 'AUTH(', 'NEWSCHEMA(', 'NEWACTION(', 'MEMORIZE(', 'CALL(', 'DATA', 'DEF.', 'CONF',
+    ];
 
-	// Add all context keys (like db, DB, etc.)
-	const dynamic = Object.keys(t.context);
-	const merge = [...commands, ...dynamic];
+    // Add all context keys (like db, DB, etc.)
+    const dynamic = Object.keys(t.context);
+    const merge = [...commands, ...dynamic];
 
-	const hits = merge.filter(c => c.startsWith(line));
-	return [hits.length ? hits : merge, line];
+    const hits = merge.filter(c => c.startsWith(line));
+    return [hits.length ? hits : merge, line];
 };
 
 
 CP.show = function () {
-	let t = this;
+    let t = this;
 
-	console.log(`
+    console.log(`
 === Console Help ===
 
 🔹 Database Commands:
@@ -949,11 +989,11 @@ Example Commands:
 `);
 };
 
-CP.history = function() {
+CP.history = function () {
     let t = this;
 
     console.log('\n=== Command History ===');
-    t.options.history.forEach(function(cmd, index) {
+    t.options.history.forEach(function (cmd, index) {
         console.log(`${index + 1}: ${cmd}`);
     });
 
@@ -961,7 +1001,7 @@ CP.history = function() {
 };
 
 
-CP.log = function(message) {
+CP.log = function (message) {
     let t = this;
 
     console.log(`[Console] ${message}`);

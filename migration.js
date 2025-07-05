@@ -26,7 +26,7 @@ function Migration(opt) {
     t.options.path = opt.location ? PATH.root(opt.location) : PATH.root('migrations');
     t.options.schema = opt.schema || 'public';
     t.options.table = opt.table || 'migrations';
-    t.options.db = t.db = opt.db || DATA || DB();
+    t.options.db = t.db = DATA || DB();
     t.options.debug = opt.debug || false;
     t.options.database = opt.database || 'postgresql'; // Fixed typo: databse -> database
     t.schemas = {};
@@ -36,6 +36,11 @@ function Migration(opt) {
     t.$migrationtable = t.options.table.indexOf(t.options.prefix) == -1 ? 
         t.options.prefix + t.options.table.toLowerCase() : 
         t.options.table.toLowerCase(); // Fixed typo: toLoweCase -> toLowerCase
+
+    // check if t.options.path exists
+    if (!Total.Fs.existsSync(t.options.path)) {
+        Total.Fs.mkdirSync(t.options.path, { recursive: true });
+    }
 }
 
 let MP = Migration.prototype;
